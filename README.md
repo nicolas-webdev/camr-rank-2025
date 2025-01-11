@@ -90,7 +90,7 @@ prisma/                # Prisma ORM
 
 ### Players
 - `GET /api/players` - List all players
-- `POST /api/players` - Create new player
+- `POST /api/players` - Create new player (admin only)
 - `GET /api/players/[id]` - Get player details
 - `PUT /api/players/[id]` - Update player (admin only)
 - `DELETE /api/players/[id]` - Delete player (admin only)
