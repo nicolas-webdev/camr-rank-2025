@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  isAdmin       Boolean   @default(false)
+  accounts      Account[]
+  sessions      Session[]
+  player        Player?
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Player {
+  id        String   @id @default(cuid())
+  userId    String?  @unique
+  nickname  String   @unique
+  rating    Int      @default(1500)
+  points    Int      @default(0)
+  rank      String   @default("新人")
+  user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  eastGames  Game[]  @relation("EastPlayer")
+  southGames Game[]  @relation("SouthPlayer")
+  westGames  Game[]  @relation("WestPlayer")
+  northGames Game[]  @relation("NorthPlayer")
+}
+
+model Game {
+  id            String   @id @default(cuid())
+  date          DateTime @default(now())
+  isHanchan     Boolean  @default(true)
+  eastPlayerId  String
+  eastScore     Int
+  southPlayerId String
+  southScore    Int
+  westPlayerId  String
+  westScore     Int
+  northPlayerId String
+  northScore    Int
+  eastPlayer    Player   @relation("EastPlayer", fields: [eastPlayerId], references: [id])
+  southPlayer   Player   @relation("SouthPlayer", fields: [southPlayerId], references: [id])
+  westPlayer    Player   @relation("WestPlayer", fields: [westPlayerId], references: [id])
+  northPlayer   Player   @relation("NorthPlayer", fields: [northPlayerId], references: [id])
+} 
