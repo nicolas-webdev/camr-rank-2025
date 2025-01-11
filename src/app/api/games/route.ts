@@ -107,7 +107,7 @@ export async function POST(request: Request) {
 
           if (!player) return;
 
-          const pointsChange = calculatePointsForPosition(position, validatedData.isHanchan, player.points.toString());
+          const pointsChange = calculatePointsForPosition(position, validatedData.isHanchan, player.rank);
           const newPoints = player.points + pointsChange;
           const newRank: RankInfo = getRankByPoints(newPoints);
 

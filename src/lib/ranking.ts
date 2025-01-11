@@ -3,56 +3,177 @@ import type { Prisma } from '@prisma/client';
 export interface RankInfo {
   kanji: string;
   translation: string;
-  pointsToNextRank: number;
-  pointsToDropRank: number;
+  pointsToNextRank: number | null;
+  pointsToDropRank: number | null | false;
   pointsForPosition: {
-    hanchan: number[];
-    tonpuusen: number[];
+    hanchan: [number, number, number, number];
+    tonpuusen: [number, number, number, number];
   };
 }
 
 export type Position = 'east' | 'south' | 'west' | 'north';
 
-const ranks: RankInfo[] = [
+export const ranks: RankInfo[] = [
   {
     kanji: '新人',
-    translation: 'Beginner',
-    pointsToNextRank: 30,
-    pointsToDropRank: -30,
+    translation: 'Principiante',
+    pointsToNextRank: 150,
+    pointsToDropRank: null,
     pointsForPosition: {
-      hanchan: [15, 5, -5, -15],
-      tonpuusen: [10, 3, -3, -10],
-    },
+      hanchan: [60, 30, 0, 0],
+      tonpuusen: [40, 20, 0, 0]
+    }
   },
   {
-    kanji: '9級',
-    translation: '9 Kyu',
-    pointsToNextRank: 40,
-    pointsToDropRank: -40,
+    kanji: '1級',
+    translation: '1 Kyu',
+    pointsToNextRank: 200,
+    pointsToDropRank: false,
     pointsForPosition: {
-      hanchan: [20, 7, -7, -20],
-      tonpuusen: [13, 4, -4, -13],
-    },
+      hanchan: [60, 30, 0, -30],
+      tonpuusen: [40, 20, 0, -20]
+    }
   },
-  // ... other ranks
+  {
+    kanji: '初段',
+    translation: '1 Dan',
+    pointsToNextRank: 400,
+    pointsToDropRank: false,
+    pointsForPosition: {
+      hanchan: [60, 30, 0, -30],
+      tonpuusen: [40, 20, 0, -20]
+    }
+  },
+  {
+    kanji: '二段',
+    translation: '2 Dan',
+    pointsToNextRank: 400,
+    pointsToDropRank: 1200,
+    pointsForPosition: {
+      hanchan: [60, 30, 0, -30],
+      tonpuusen: [40, 20, 0, -20]
+    }
+  },
+  {
+    kanji: '三段',
+    translation: '3 Dan',
+    pointsToNextRank: 600,
+    pointsToDropRank: 1600,
+    pointsForPosition: {
+      hanchan: [60, 30, 0, -30],
+      tonpuusen: [40, 20, 0, -20]
+    }
+  },
+  {
+    kanji: '四段',
+    translation: '4 Dan',
+    pointsToNextRank: 600,
+    pointsToDropRank: 2000,
+    pointsForPosition: {
+      hanchan: [60, 30, -15, -45],
+      tonpuusen: [40, 20, -10, -30]
+    }
+  },
+  {
+    kanji: '五段',
+    translation: '5 Dan',
+    pointsToNextRank: 800,
+    pointsToDropRank: 2600,
+    pointsForPosition: {
+      hanchan: [60, 30, -15, -45],
+      tonpuusen: [40, 20, -10, -30]
+    }
+  },
+  {
+    kanji: '六段',
+    translation: '6 Dan',
+    pointsToNextRank: 1000,
+    pointsToDropRank: 3200,
+    pointsForPosition: {
+      hanchan: [60, 30, -15, -45],
+      tonpuusen: [40, 20, -10, -30]
+    }
+  },
+  {
+    kanji: '七段',
+    translation: '7 Dan',
+    pointsToNextRank: 1000,
+    pointsToDropRank: 4000,
+    pointsForPosition: {
+      hanchan: [60, 30, -30, -60],
+      tonpuusen: [40, 20, -20, -40]
+    }
+  },
+  {
+    kanji: '八段',
+    translation: '8 Dan',
+    pointsToNextRank: 1500,
+    pointsToDropRank: 5000,
+    pointsForPosition: {
+      hanchan: [60, 30, -30, -60],
+      tonpuusen: [40, 20, -20, -40]
+    }
+  },
+  {
+    kanji: '九段',
+    translation: '9 Dan',
+    pointsToNextRank: 1500,
+    pointsToDropRank: 6000,
+    pointsForPosition: {
+      hanchan: [60, 30, -30, -75],
+      tonpuusen: [40, 20, -20, -50]
+    }
+  },
+  {
+    kanji: '十段',
+    translation: '10 Dan',
+    pointsToNextRank: null,
+    pointsToDropRank: 7500,
+    pointsForPosition: {
+      hanchan: [60, 30, -45, -75],
+      tonpuusen: [40, 20, -30, -50]
+    }
+  },
+  {
+    kanji: '神室王',
+    translation: 'Rey Dios',
+    pointsToNextRank: null,
+    pointsToDropRank: false,
+    pointsForPosition: {
+      hanchan: [60, 30, -30, -60],
+      tonpuusen: [40, 20, -20, -40]
+    }
+  }
 ];
 
 export function getRankByPoints(points: number): RankInfo {
-  // Start from the highest rank and work down
+  // Loop through ranks in reverse order to find the highest applicable rank
   for (let i = ranks.length - 1; i >= 0; i--) {
     const rank = ranks[i];
-    const prevRank = ranks[i - 1];
-    if (!prevRank || points >= prevRank.pointsToNextRank) {
+    const nextRank = ranks[i + 1];
+    
+    // If this is the highest rank, return it if points are sufficient
+    if (!rank.pointsToNextRank && points >= 0) {
+      return rank;
+    }
+    
+    // For other ranks, check if points are in the correct range
+    if (nextRank && points >= 0 && points < nextRank.pointsToNextRank!) {
       return rank;
     }
   }
-  return ranks[0]; // Default to beginner rank
+  
+  // Return beginner rank if no other rank applies
+  return ranks[0];
 }
 
-export function shouldDropRank(points: number, currentRank: string): boolean {
-  const rankInfo = ranks.find(rank => rank.kanji === currentRank);
-  if (!rankInfo) return false;
-  return points <= rankInfo.pointsToDropRank;
+export function shouldDropRank(points: number, currentRank: RankInfo): boolean {
+  // Never drop rank if pointsToDropRank is null or false
+  if (currentRank.pointsToDropRank === null || currentRank.pointsToDropRank === false) {
+    return false;
+  }
+  
+  return points <= currentRank.pointsToDropRank;
 }
 
 export async function updatePlayerRank(tx: Prisma.TransactionClient, playerId: string, pointsChange: number): Promise<void> {
