@@ -4,6 +4,7 @@ import { authOptions } from '../auth/[...nextauth]/route';
 import { z } from 'zod';
 import { db, calculatePointsForPosition, getRankByPoints } from '@/lib';
 import type { Session } from 'next-auth';
+import type { Prisma } from '@prisma/client';
 
 // Extend Session type to include id
 interface ExtendedSession extends Session {
@@ -74,6 +75,49 @@ export async function GET() {
   }
 }
 
+// Recalculate all points for a player
+async function recalculatePlayerPoints(tx: Prisma.TransactionClient, playerId: string) {
+  // Get all games for this player in chronological order
+  const games = await tx.game.findMany({
+    where: {
+      OR: [
+        { eastPlayerId: playerId },
+        { southPlayerId: playerId },
+        { westPlayerId: playerId },
+        { northPlayerId: playerId }
+      ],
+      isDeleted: false
+    },
+    orderBy: {
+      date: 'asc'
+    }
+  });
+
+  // Calculate points progressively through their game history
+  let points = 0;
+  let currentRank = '新人';
+  
+  for (const game of games) {
+    const position = game.eastPlayerId === playerId ? 0 
+      : game.southPlayerId === playerId ? 1
+      : game.westPlayerId === playerId ? 2
+      : 3;
+    
+    // Calculate points based on their rank at the time of this game
+    points += calculatePointsForPosition(position, game.isHanchan, currentRank);
+    currentRank = getRankByPoints(points).kanji;
+  }
+
+  // Update player's final points and rank
+  await tx.player.update({
+    where: { id: playerId },
+    data: {
+      points,
+      rank: currentRank
+    }
+  });
+}
+
 // POST requires authentication
 export async function POST(request: Request) {
   try {
@@ -90,51 +134,8 @@ export async function POST(request: Request) {
 
     // Create a new game and update player points
     const game = await db.$transaction(async (tx) => {
-      // Calculate points changes for each player
-      const playerUpdates = [
-        { playerId: validatedData.eastPlayerId, position: 0, score: validatedData.eastScore },
-        { playerId: validatedData.southPlayerId, position: 1, score: validatedData.southScore },
-        { playerId: validatedData.westPlayerId, position: 2, score: validatedData.westScore },
-        { playerId: validatedData.northPlayerId, position: 3, score: validatedData.northScore },
-      ].sort((a, b) => b.score - a.score);
-
-      // Update player points
-      await Promise.all(
-        playerUpdates.map(async ({ playerId, position }) => {
-          const player = await tx.player.findUnique({
-            where: { id: playerId },
-            select: {
-              id: true,
-              rank: true,
-              points: true
-            }
-          });
-
-          if (!player) {
-            throw new Error(`Player ${playerId} not found`);
-          }
-
-          if (!player.rank) {
-            console.warn(`Player ${playerId} has no rank, using default rank '新人'`);
-            player.rank = '新人';
-          }
-
-          const pointsChange = calculatePointsForPosition(position, validatedData.isHanchan, player.rank);
-          const newPoints = player.points + pointsChange;
-          const newRank = getRankByPoints(newPoints);
-
-          await tx.player.update({
-            where: { id: playerId },
-            data: {
-              points: newPoints,
-              rank: newRank.kanji,
-            },
-          });
-        })
-      );
-
-      // Create the game
-      return tx.game.create({
+      // Create the game first
+      const createdGame = await tx.game.create({
         data: {
           ...validatedData,
           createdById: session.user.id,
@@ -149,6 +150,16 @@ export async function POST(request: Request) {
           },
         },
       });
+
+      // Recalculate points for all affected players
+      await Promise.all([
+        recalculatePlayerPoints(tx, validatedData.eastPlayerId),
+        recalculatePlayerPoints(tx, validatedData.southPlayerId),
+        recalculatePlayerPoints(tx, validatedData.westPlayerId),
+        recalculatePlayerPoints(tx, validatedData.northPlayerId),
+      ]);
+
+      return createdGame;
     });
 
     return NextResponse.json(game, {
