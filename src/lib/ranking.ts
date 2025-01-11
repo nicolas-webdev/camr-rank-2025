@@ -232,23 +232,28 @@ export function getRankByPoints(points: number): RankInfo {
     return ranks[0];
   }
 
-  // Find the current rank based on points
-  for (let i = 0; i < ranks.length; i++) {
+  let cumulativePoints = 0;
+  
+  // Loop through ranks to find where the points fall
+  for (let i = 0; i < ranks.length - 1; i++) {
     const currentRank = ranks[i];
-
-    // Stay at current rank if:
-    // 1. We're at the last rank, or
-    // 2. Current rank has no progression (pointsToNextRank is null), or
-    // 3. We don't have enough points to progress to next rank
-    if (i === ranks.length - 1 || 
-        currentRank.pointsToNextRank === null || 
-        points < currentRank.pointsToNextRank) {
+    
+    // Skip if this rank has no progression
+    if (currentRank.pointsToNextRank === null) {
+      return currentRank;
+    }
+    
+    // Calculate points needed for next rank
+    cumulativePoints += currentRank.pointsToNextRank;
+    
+    // If we haven't reached enough points for the next rank, stay at current rank
+    if (points < cumulativePoints) {
       return currentRank;
     }
   }
   
-  // Fallback to beginner rank (shouldn't happen due to loop logic)
-  return ranks[0];
+  // If we've accumulated enough points for the highest rank, return it
+  return ranks[ranks.length - 1];
 }
 
 export function shouldDropRank(points: number, currentRank: RankInfo): boolean {
