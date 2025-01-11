@@ -1,12 +1,17 @@
-# Mahjong League
+# Mahjong League 🀄
+
+[![Next.js](https://img.shields.io/badge/Next.js-14.1.0-black)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)](https://www.typescriptlang.org/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4.1-38B2AC)](https://tailwindcss.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A comprehensive web application for managing a Mahjong league, tracking player rankings, and recording game results. This application serves as a digital platform for Mahjong communities to maintain their competitive leagues, automating the complex process of rank progression and point calculations while providing transparency in game history and player statistics.
 
-## Overview
+## 🌟 Overview
 
 The Mahjong League application is designed to solve several key challenges in managing competitive Mahjong leagues:
 
-1. **Rank Management**: Automatically handles player progression through different ranks (新人, 9級, etc.) based on their performance, implementing a sophisticated point system that accounts for game results and current player ranks.
+1. **Rank Management**: Automatically handles player progression through different ranks (新人 to 神室王) based on their performance, implementing a sophisticated point system that accounts for game results and current player ranks.
 
 2. **Game Recording**: Provides a reliable system for recording game results, including support for both Hanchan (full games) and Tonpuusen (east-only games), with built-in validation and point calculation.
 
@@ -14,7 +19,7 @@ The Mahjong League application is designed to solve several key challenges in ma
 
 4. **Statistical Analysis**: Tracks and displays comprehensive statistics for each player, helping them understand their performance and progression over time.
 
-## Features
+## 🎮 Features
 
 ### Player Management
 - Create and manage player profiles with unique nicknames
@@ -39,21 +44,41 @@ The Mahjong League application is designed to solve several key challenges in ma
 - Public access to view games and player statistics
 - Admin-only access for CUD operations (Create, Update, Delete)
 
-### Ranking System
-The ranking system is designed to reflect player skill and progression:
+## 🏆 Ranking System
 
-- Multiple rank levels with increasing point requirements:
-  - 新人 (Beginner): Starting rank
-  - 9級 (9 Kyu): First promotion
-  - Each rank requires more points to achieve and maintain
-- Points awarded based on game position:
-  - Hanchan: +30/+10/-10/-30 points
-  - Tonpuusen: +20/+5/-5/-20 points
-- Automatic rank progression when point thresholds are met
-- Rank protection system to prevent immediate demotion
-- Different point scales for Hanchan and Tonpuusen games to reflect game length
+The ranking system is designed to reflect player skill and progression through Japanese Mahjong ranks:
 
-## Technical Architecture
+### Rank Progression
+1. **新人** (Beginner) - Starting rank
+2. **1級** (1 Kyu) - First promotion
+3. **初段** (Shodan/1 Dan) - First dan rank
+4. **二段** (2 Dan) - Second dan rank
+5. **三段** (3 Dan) - Third dan rank
+6. **四段** (4 Dan) - Fourth dan rank
+7. **五段** (5 Dan) - Fifth dan rank
+8. **六段** (6 Dan) - Sixth dan rank
+9. **七段** (7 Dan) - Seventh dan rank
+10. **八段** (8 Dan) - Eighth dan rank
+11. **九段** (9 Dan) - Ninth dan rank
+12. **十段** (10 Dan) - Tenth dan rank
+13. **神室王** (Shinshitsuou/Divine Room King) - Ultimate rank
+
+### Point System
+- **Hanchan (Full Game)**
+  - 1st Place: +60 points
+  - 2nd Place: +30 points
+  - 3rd Place: -30 points (varies by rank)
+  - 4th Place: -60 points (varies by rank)
+
+- **Tonpuusen (East-only Game)**
+  - 1st Place: +40 points
+  - 2nd Place: +20 points
+  - 3rd Place: -20 points (varies by rank)
+  - 4th Place: -40 points (varies by rank)
+
+*Note: Point values vary based on player rank, with higher ranks having more severe penalties for lower positions.*
+
+## 🛠️ Technical Architecture
 
 ### Edge Runtime Compatibility
 The application is designed to run on Edge Runtime (Vercel Edge Functions, Next.js Edge API Routes) with:
@@ -77,164 +102,58 @@ datasource db {
 }
 ```
 
-### API Security
-- Public endpoints:
-  - GET /api/players - List all players
-  - GET /api/players/[id] - Get player details
-  - GET /api/games - List all games
-  - GET /api/games/[id] - Get game details
+## 🚀 Getting Started
 
-- Protected endpoints (admin only):
-  - POST /api/players - Create new player
-  - PUT /api/players/[id] - Update player
-  - DELETE /api/players/[id] - Delete player
-  - POST /api/games - Create new game
-  - PUT /api/games/[id] - Update game
-  - DELETE /api/games/[id] - Delete game
+### Prerequisites
+- Node.js 18.x or later
+- PostgreSQL 14.x or later
+- GitHub account (for authentication)
 
-## Project Structure
-
-```
-src/
-├── app/                    # Next.js app directory
-│   ├── api/               # API routes
-│   │   ├── auth/         # Authentication endpoints
-│   │   ├── games/        # Game management endpoints
-│   │   ├── players/      # Player management endpoints
-│   │   └── users/        # User management endpoints
-│   ├── games/            # Game-related pages
-│   ├── players/          # Player-related pages
-│   ├── standings/        # League standings page
-│   └── layout.tsx        # Root layout
-├── components/           # React components
-│   ├── auth/            # Authentication components
-│   ├── ui/              # UI components
-│   └── ...              # Other components
-├── lib/                 # Utility functions and shared code
-│   ├── db.ts           # Database client
-│   ├── ranking.ts      # Ranking system logic
-│   └── ...             # Other utilities
-├── store/              # State management
-│   ├── gameStore.ts    # Game-related state
-│   ├── playerStore.ts  # Player-related state
-│   └── statsStore.ts   # Statistics state
-├── types/              # TypeScript type definitions
-└── services/          # External service integrations
-
-prisma/                # Prisma ORM
-├── migrations/       # Database migrations
-├── schema.prisma    # Database schema
-└── seed.ts          # Seed data
-```
-
-## API Endpoints
-
-### Authentication
-- `POST /api/auth/[...nextauth]` - Handle authentication
-- `GET /api/auth/session` - Get current session
-
-### Players
-- `GET /api/players` - List all players
-- `POST /api/players` - Create new player (admin only)
-- `GET /api/players/[id]` - Get player details
-- `PUT /api/players/[id]` - Update player (admin only)
-- `DELETE /api/players/[id]` - Delete player (admin only)
-- `GET /api/players/[id]/games` - Get player's games
-
-### Games
-- `GET /api/games` - List all games
-- `POST /api/games` - Create new game
-- `GET /api/games/[id]` - Get game details
-- `PUT /api/games/[id]` - Update game (admin only)
-- `DELETE /api/games/[id]` - Delete game (admin only)
-- `POST /api/games/[id]/restore` - Restore deleted game (admin only)
-- `GET /api/games/[id]/history` - Get game history (admin only)
-
-### Users
-- `GET /api/users/[id]` - Get user details
-
-## Database Schema
-
-### User
-- id: string (cuid)
-- name: string?
-- email: string?
-- emailVerified: DateTime?
-- image: string?
-- isAdmin: boolean
-- accounts: Account[]
-- sessions: Session[]
-- player: Player?
-
-### Player
-- id: string (cuid)
-- userId: string?
-- nickname: string
-- rating: int
-- points: int
-- rank: string
-- createdAt: DateTime
-- updatedAt: DateTime
-- games: Game[]
-
-### Game
-- id: string (cuid)
-- date: DateTime
-- isHanchan: boolean
-- eastPlayerId: string
-- eastScore: int
-- southPlayerId: string
-- southScore: int
-- westPlayerId: string
-- westScore: int
-- northPlayerId: string
-- northScore: int
-- createdAt: DateTime
-- createdById: string
-- updatedAt: DateTime
-- updatedById: string?
-- deletedAt: DateTime?
-- deletedById: string?
-- isDeleted: boolean
-- previousVersionId: string?
-
-## Environment Variables
-
-```env
-# Database
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/mahjong_league"
-
-# Authentication
-GITHUB_ID="your_github_client_id"
-GITHUB_SECRET="your_github_client_secret"
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your_nextauth_secret"
-
-# App
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-```
-
-## Getting Started
+### Installation
 
 1. Clone the repository
-2. Install dependencies:
+   ```bash
+   git clone https://github.com/yourusername/mahjong-league.git
+   cd mahjong-league
+   ```
+
+2. Install dependencies
    ```bash
    npm install
    ```
-3. Set up environment variables:
+
+3. Set up environment variables
    ```bash
    cp .env.example .env
    ```
-4. Set up the database:
+   Edit `.env` with your configuration:
+   ```env
+   # Database
+   DATABASE_URL="postgresql://postgres:postgres@localhost:5432/mahjong_league"
+
+   # Authentication
+   GITHUB_ID="your_github_client_id"
+   GITHUB_SECRET="your_github_client_secret"
+   NEXTAUTH_URL="http://localhost:3000"
+   NEXTAUTH_SECRET="your_nextauth_secret"
+
+   # App
+   NEXT_PUBLIC_APP_URL="http://localhost:3000"
+   ```
+
+4. Set up the database
    ```bash
    npm run db:setup
    ```
-5. Start the development server:
+
+5. Start the development server
    ```bash
    npm run dev
    ```
 
-## Scripts
+Visit `http://localhost:3000` to see the application running.
+
+## 📝 Scripts
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
@@ -245,215 +164,47 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 - `npm run prisma:seed` - Seed database
 - `npm run db:setup` - Set up database (generate, migrate, seed)
 
-## Technologies Used
+## 🧪 Testing
 
-- Next.js 15 (App Router)
-- React 19
-- Tailwind CSS
-- Shadcn UI
-- TypeScript
-- Prisma (PostgreSQL)
-- NextAuth.js
-- TailwindCSS
-- Zustand
-- Zod
-- HeadlessUI
+The application uses several testing methodologies:
 
-## AI Development Prompt
-
-To recreate this application, follow this structured approach:
-
-1. **Initial Setup**
-```
-Create a Next.js application with TypeScript and the following key dependencies:
-- Prisma for database management
-- NextAuth.js for authentication
-- TailwindCSS for styling
-- Zustand for state management
-- Zod for validation
-```
-
-2. **Database Design**
-```
-Implement a PostgreSQL database with these core models:
-- User: Authentication and admin status
-- Player: Game statistics and ranking information
-- Game: Match results with audit trails
-Ensure proper relations and constraints between models.
-```
-
-3. **Authentication System**
-```
-Set up NextAuth.js with GitHub provider:
-- Configure OAuth credentials
-- Implement protected routes
-- Add admin role functionality
-- Create middleware for route protection
-```
-
-4. **Core Features Implementation**
-```
-Build the following key features in order:
-1. Player Management:
-   - CRUD operations for players
-   - Ranking system implementation
-   - Statistics calculation
-
-2. Game Recording:
-   - Game creation form with validation
-   - Point calculation system
-   - Position-based scoring
-
-3. Administrative Features:
-   - Game editing with version history
-   - Soft delete functionality
-   - Audit trail system
-```
-
-5. **Ranking System Logic**
-```
-Implement the ranking system with these components:
-1. Define rank levels with point thresholds
-2. Create point calculation formulas:
-   - Base points per position
-   - Rank multipliers
-   - Game type adjustments
-3. Add rank progression/demotion logic
-4. Implement protection mechanisms
-```
-
-6. **Frontend Development**
-```
-Create React components following this structure:
-1. Layout components:
-   - Navigation
-   - Authentication UI
-   - Error boundaries
-
-2. Feature components:
-   - Player profile displays
-   - Game recording forms
-   - Ranking displays
-   - Statistics views
-
-3. Administrative interfaces:
-   - Game management
-   - Player management
-   - Audit trails
-```
-
-7. **State Management**
-```
-Implement Zustand stores for:
-1. Player state:
-   - Current players
-   - Rankings
-   - Statistics
-
-2. Game state:
-   - Recent games
-   - Game history
-   - Edit/delete status
-
-3. Authentication state:
-   - User session
-   - Admin status
-```
-
-8. **API Development**
-```
-Create API endpoints following REST principles:
-1. Player endpoints:
-   - CRUD operations
-   - Statistics calculation
-   - Game history
-
-2. Game endpoints:
-   - Creation/modification
-   - Point calculation
-   - History tracking
-
-3. Administrative endpoints:
-   - Audit trails
-   - User management
-```
-
-9. **Testing and Validation**
-```
-Implement comprehensive testing:
-1. Unit tests for:
-   - Point calculation
-   - Rank progression
-   - Game validation
-
-2. Integration tests for:
-   - API endpoints
-   - Authentication flow
-   - Database operations
-
-3. E2E tests for:
-   - Game recording flow
-   - Player management
-   - Administrative actions
-```
-
-10. **Deployment Considerations**
-```
-Prepare for deployment with:
-1. Environment configuration
-2. Database migration setup
-3. Seed data preparation
-4. Production optimizations
-5. Error logging and monitoring
-```
-
-This application requires careful attention to:
-- Data consistency in game records
-- Accurate point calculations
-- Proper audit trailing
-- Secure administrative access
-- Efficient state management
-- Responsive user interface
-
-The most challenging aspects are:
-1. Maintaining data integrity during game modifications
-2. Ensuring accurate point calculations across different ranks
-3. Managing the complexity of the ranking system
-4. Handling concurrent game recordings
-5. Maintaining a complete audit trail
-
-## Edge Deployment Requirements
-
-When deploying to edge environments (e.g., Vercel Edge Functions):
-
-1. Configure PostgreSQL connection:
-   ```typescript
-   import { Pool } from 'pg';
-   import { PrismaPg } from '@prisma/adapter-pg';
-
-   const pool = new Pool({
-     connectionString: process.env.DATABASE_URL,
-     ssl: process.env.NODE_ENV === 'production' ? {
-       rejectUnauthorized: false
-     } : undefined
-   });
-
-   const adapter = new PrismaPg(pool);
-   ```
-
-2. Install required packages:
+1. **Unit Tests**
    ```bash
-   npm install @prisma/adapter-pg pg
+   npm run test:unit
    ```
 
-3. For Nuxt.js deployments to edge environments, add:
-   ```typescript
-   // nuxt.config.ts
-   export default defineNuxtConfig({
-     nitro: {
-       experimental: {
-         wasm: true
-       }
-     }
-   })
+2. **Integration Tests**
+   ```bash
+   npm run test:integration
    ```
+
+3. **E2E Tests**
+   ```bash
+   npm run test:e2e
+   ```
+
+## 🤝 Contributing
+
+We welcome contributions! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+Please ensure your PR adheres to:
+- Consistent code style
+- Proper test coverage
+- Clear commit messages
+- Updated documentation
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Thanks to all contributors who have helped shape this project
+- Special thanks to the Mahjong community for their feedback and support
+- Built with [Next.js](https://nextjs.org/), [TailwindCSS](https://tailwindcss.com/), and [Prisma](https://www.prisma.io/)
