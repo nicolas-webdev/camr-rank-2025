@@ -45,10 +45,26 @@ export async function GET(request: Request) {
         rank: true,
         _count: {
           select: {
-            eastGames: true,
-            southGames: true,
-            westGames: true,
-            northGames: true,
+            eastGames: {
+              where: {
+                isDeleted: false
+              }
+            },
+            southGames: {
+              where: {
+                isDeleted: false
+              }
+            },
+            westGames: {
+              where: {
+                isDeleted: false
+              }
+            },
+            northGames: {
+              where: {
+                isDeleted: false
+              }
+            },
           }
         }
       }
