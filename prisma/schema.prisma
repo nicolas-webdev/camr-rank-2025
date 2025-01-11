@@ -44,6 +44,11 @@ model User {
   accounts      Account[]
   sessions      Session[]
   player        Player?
+  
+  // Game audit relations
+  gamesCreated  Game[]   @relation("GameCreator")
+  gamesUpdated  Game[]   @relation("GameUpdater")
+  gamesDeleted  Game[]   @relation("GameDeleter")
 }
 
 model VerificationToken {
@@ -86,4 +91,21 @@ model Game {
   southPlayer   Player   @relation("SouthPlayer", fields: [southPlayerId], references: [id])
   westPlayer    Player   @relation("WestPlayer", fields: [westPlayerId], references: [id])
   northPlayer   Player   @relation("NorthPlayer", fields: [northPlayerId], references: [id])
+  
+  // Audit fields
+  createdAt     DateTime @default(now())
+  createdById   String
+  createdBy     User    @relation("GameCreator", fields: [createdById], references: [id])
+  updatedAt     DateTime @updatedAt
+  updatedById   String?
+  updatedBy     User?   @relation("GameUpdater", fields: [updatedById], references: [id])
+  deletedAt     DateTime?
+  deletedById   String?
+  deletedBy     User?   @relation("GameDeleter", fields: [deletedById], references: [id])
+  isDeleted     Boolean  @default(false)
+  
+  // Revision history
+  previousVersionId String?   @unique
+  previousVersion   Game?     @relation("GameHistory", fields: [previousVersionId], references: [id])
+  nextVersion      Game?     @relation("GameHistory")
 } 

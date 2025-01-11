@@ -7,7 +7,7 @@ import { PlayerSearch } from './PlayerSearch';
 
 export function Navigation() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   const isActive = (path: string) => {
     return pathname === path;
@@ -33,7 +33,17 @@ export function Navigation() {
               >
                 Home
               </Link>
-              {session && (
+              {status === 'loading' ? (
+                // Loading skeleton for nav items
+                <div className="space-x-8">
+                  <div className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent">
+                    <div className="h-4 w-24 bg-gray-200 animate-pulse rounded"></div>
+                  </div>
+                  <div className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent">
+                    <div className="h-4 w-24 bg-gray-200 animate-pulse rounded"></div>
+                  </div>
+                </div>
+              ) : session ? (
                 <>
                   <Link
                     href="/games/new"
@@ -54,7 +64,7 @@ export function Navigation() {
                     Create Player
                   </Link>
                 </>
-              )}
+              ) : null}
             </div>
             <div className="flex-1 max-w-lg ml-6">
               <PlayerSearch />

@@ -1,13 +1,17 @@
 import './globals.css';
+import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import { AuthProvider } from '@/components/providers/AuthProvider';
-import { SignInButton } from '@/components/auth/SignInButton';
+import { Navigation } from '@/components/Navigation';
+import { Providers } from '@/components/Providers';
+import { LoadingNavigation } from '@/components/LoadingNavigation';
+import { Suspense } from 'react';
+import * as React from 'react';
 
 const inter = Inter({ subsets: ['latin'] });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Mahjong League',
-  description: 'Track your Mahjong games and rankings',
+  description: 'Track your mahjong games and rankings',
 };
 
 export default function RootLayout({
@@ -17,26 +21,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-gray-100`}>
-        <AuthProvider>
-          <nav className="bg-white shadow-sm">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between h-16">
-                <div className="flex">
-                  <div className="flex-shrink-0 flex items-center">
-                    <h1 className="text-xl font-bold">Mahjong League</h1>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <SignInButton />
-                </div>
-              </div>
-            </div>
-          </nav>
-          <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <body className={inter.className}>
+        <Providers>
+          <Suspense fallback={<LoadingNavigation />}>
+            <Navigation />
+          </Suspense>
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {children}
           </main>
-        </AuthProvider>
+        </Providers>
       </body>
     </html>
   );

@@ -1,29 +1,31 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { prisma } from '@/lib/prisma';
+import { authOptions } from '../../auth/[...nextauth]/route';
+import { db } from '@/lib';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, { id }] = await Promise.all([
+      getServerSession(authOptions),
+      context.params
+    ]);
+
     if (!session?.user?.id) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    // Only allow users to check their own admin status
-    if (session.user.id !== params.id) {
+    // Users can only check their own admin status
+    if (session.user.id !== id) {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: params.id },
+    const user = await db.user.findUnique({
+      where: { id },
       select: {
         id: true,
-        name: true,
-        email: true,
         isAdmin: true,
       },
     });
@@ -34,7 +36,7 @@ export async function GET(
 
     return NextResponse.json(user);
   } catch (error) {
-    console.error('Error fetching user:', error);
+    console.error('Failed to fetch user:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 } 

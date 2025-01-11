@@ -1,26 +1,26 @@
 import { withAuth } from 'next-auth/middleware';
+import { NextResponse } from 'next/server';
 
-export default withAuth({
-  callbacks: {
-    authorized({ req, token }) {
-      // Only require auth for non-public routes
-      const publicPaths = ['/'];
-      const isPublicPath = publicPaths.some(path => 
-        req.nextUrl.pathname.startsWith(path)
-      );
-      
-      return isPublicPath || !!token;
+export default withAuth(
+  function middleware() {
+    return NextResponse.next();
+  },
+  {
+    callbacks: {
+      authorized: ({ token }) => !!token
+    },
+    pages: {
+      signIn: '/api/auth/signin'
     }
   }
-});
+);
 
 export const config = {
   matcher: [
-    '/players/:path*',
-    '/games/:path*',
-    '/standings/:path*',
-    '/api/players/:path*',
+    '/games/new',
+    '/players/new',
     '/api/games/:path*',
-    '/api/stats/:path*',
+    '/api/players/:path*',
+    '/api/users/:path*'
   ]
 }; 

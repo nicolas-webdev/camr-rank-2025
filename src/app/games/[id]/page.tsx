@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { prisma } from '@/lib/prisma';
+import { db } from '@/lib';
 
 type Position = 'East' | 'South' | 'West' | 'North';
 
@@ -14,7 +14,7 @@ type Score = {
 };
 
 async function getGameData(id: string) {
-  const game = await prisma.game.findUnique({
+  const game = await db.game.findUnique({
     where: { id },
     include: {
       eastPlayer: true,

@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import Link from 'next/link';
+import GameActions from '@/components/GameActions';
 
 type Player = {
   id: string;
@@ -23,6 +24,7 @@ type Game = {
   westScore: number;
   northPlayer: Player;
   northScore: number;
+  isDeleted: boolean;
 };
 
 export default function Home() {
@@ -31,21 +33,45 @@ export default function Home() {
   const [topPlayers, setTopPlayers] = useState<Player[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (session?.user?.id) {
+        try {
+          const response = await fetch(`/api/users/${session.user.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            setIsAdmin(data.isAdmin);
+          }
+        } catch {
+          // Ignore error, default to non-admin
+        }
+      }
+    };
+
+    checkAdminStatus();
+  }, [session]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch recent games
-        const gamesResponse = await fetch('/api/games');
-        if (!gamesResponse.ok) throw new Error('Failed to fetch games');
-        const gamesData = await gamesResponse.json();
-        setRecentGames(gamesData);
+        const [gamesResponse, playersResponse] = await Promise.all([
+          fetch('/api/games'),
+          fetch('/api/players'),
+        ]);
 
-        // Fetch top players
-        const playersResponse = await fetch('/api/players');
-        if (!playersResponse.ok) throw new Error('Failed to fetch players');
-        const playersData = await playersResponse.json();
-        setTopPlayers(playersData.sort((a: Player, b: Player) => b.points - a.points));
+        if (!gamesResponse.ok || !playersResponse.ok) {
+          throw new Error('Failed to fetch data');
+        }
+
+        const [games, players] = await Promise.all([
+          gamesResponse.json(),
+          playersResponse.json(),
+        ]);
+
+        setRecentGames(games);
+        setTopPlayers(players);
       } catch {
         setError('Failed to load data');
       } finally {
@@ -56,127 +82,158 @@ export default function Home() {
     fetchData();
   }, []);
 
+  const handleGameUpdated = () => {
+    // Refetch data when a game is updated
+    setIsLoading(true);
+    setError(null);
+    const fetchData = async () => {
+      try {
+        const [gamesResponse, playersResponse] = await Promise.all([
+          fetch('/api/games'),
+          fetch('/api/players'),
+        ]);
+
+        if (!gamesResponse.ok || !playersResponse.ok) {
+          throw new Error('Failed to fetch data');
+        }
+
+        const [games, players] = await Promise.all([
+          gamesResponse.json(),
+          playersResponse.json(),
+        ]);
+
+        setRecentGames(games);
+        setTopPlayers(players);
+      } catch {
+        setError('Failed to load data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-600">{error}</p>
+      <div className="text-red-600 text-center py-8">
+        {error}
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Games */}
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">Recent Games</h2>
-            {session?.user && (
+            {session && isAdmin && (
               <Link
                 href="/games/new"
-                className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                className="bg-indigo-500 text-white py-2 px-4 rounded-md hover:bg-indigo-600"
               >
                 Record Game
               </Link>
             )}
           </div>
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Players
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Scores
-                    </th>
+
+          <div className="bg-white shadow rounded-lg overflow-hidden">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Date</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Type</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Players</th>
+                  {isAdmin && (
+                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Actions</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {recentGames.map((game) => (
+                  <tr key={game.id} className={game.isDeleted ? 'bg-red-50' : ''}>
+                    <td className="px-4 py-2 text-sm text-gray-900">
+                      {new Date(game.date).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-gray-900">
+                      {game.isDeleted ? (
+                        <span className="text-red-600">Deleted</span>
+                      ) : (
+                        <span>{game.isHanchan ? 'Hanchan' : 'Tonpuusen'}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-sm">
+                      <div className="space-y-1">
+                        <div>
+                          🀀 <Link href={`/players/${game.eastPlayer.id}`} className="text-indigo-600 hover:text-indigo-900">
+                            {game.eastPlayer.nickname}
+                          </Link>: {game.eastScore}
+                        </div>
+                        <div>
+                          🀁 <Link href={`/players/${game.southPlayer.id}`} className="text-indigo-600 hover:text-indigo-900">
+                            {game.southPlayer.nickname}
+                          </Link>: {game.southScore}
+                        </div>
+                        <div>
+                          🀂 <Link href={`/players/${game.westPlayer.id}`} className="text-indigo-600 hover:text-indigo-900">
+                            {game.westPlayer.nickname}
+                          </Link>: {game.westScore}
+                        </div>
+                        <div>
+                          🀃 <Link href={`/players/${game.northPlayer.id}`} className="text-indigo-600 hover:text-indigo-900">
+                            {game.northPlayer.nickname}
+                          </Link>: {game.northScore}
+                        </div>
+                      </div>
+                    </td>
+                    {isAdmin && (
+                      <td className="px-4 py-2 text-sm">
+                        <GameActions game={game} onGameUpdated={handleGameUpdated} />
+                      </td>
+                    )}
                   </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {recentGames.map((game) => (
-                    <tr key={game.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(game.date).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {game.isHanchan ? 'Hanchan' : 'Tonpuusen'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div className="space-y-1">
-                          <div>🀀 {game.eastPlayer.nickname}</div>
-                          <div>🀁 {game.southPlayer.nickname}</div>
-                          <div>🀂 {game.westPlayer.nickname}</div>
-                          <div>🀃 {game.northPlayer.nickname}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div className="space-y-1">
-                          <div>{game.eastScore}</div>
-                          <div>{game.southScore}</div>
-                          <div>{game.westScore}</div>
-                          <div>{game.northScore}</div>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        {/* Top Players */}
         <div>
           <h2 className="text-2xl font-bold mb-4">Top Players</h2>
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="bg-white shadow rounded-lg overflow-hidden">
+            <table className="min-w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Rank
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Player
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Points
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Grade
-                  </th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Rank</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Player</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Points</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200">
                 {topPlayers.map((player, index) => (
                   <tr key={player.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      #{index + 1}
+                    <td className="px-4 py-2 text-sm text-gray-900">
+                      {index + 1}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <Link href={`/players/${player.id}`} className="hover:text-indigo-600">
+                    <td className="px-4 py-2 text-sm">
+                      <Link href={`/players/${player.id}`} className="text-indigo-600 hover:text-indigo-900">
                         {player.nickname}
                       </Link>
+                      <span className="ml-2 text-gray-500">
+                        {player.rank}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-2 text-sm text-gray-900">
                       {player.points}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {player.rank}
                     </td>
                   </tr>
                 ))}
