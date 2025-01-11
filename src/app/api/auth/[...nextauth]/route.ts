@@ -3,6 +3,7 @@ import { AuthOptions } from 'next-auth';
 import GithubProvider from 'next-auth/providers/github';
 import NextAuth from 'next-auth';
 import { Session } from 'next-auth';
+import { PrismaAdapter } from '@auth/prisma-adapter';
 
 interface ExtendedUser {
   id: string;
@@ -23,6 +24,7 @@ export interface ExtendedSession extends Omit<Session, 'user'> {
 }
 
 export const authOptions: AuthOptions = {
+  adapter: PrismaAdapter(db),
   providers: [
     GithubProvider({
       clientId: process.env.GITHUB_ID!,

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { z } from 'zod';
-import { db, calculatePointsForPosition, getRankByPoints, type RankInfo } from '@/lib';
+import { db, calculatePointsForPosition, getRankByPoints } from '@/lib';
 import type { Session } from 'next-auth';
 
 // Extend Session type to include id
@@ -102,14 +102,26 @@ export async function POST(request: Request) {
       await Promise.all(
         playerUpdates.map(async ({ playerId, position }) => {
           const player = await tx.player.findUnique({
-            where: { id: playerId }
+            where: { id: playerId },
+            select: {
+              id: true,
+              rank: true,
+              points: true
+            }
           });
 
-          if (!player) return;
+          if (!player) {
+            throw new Error(`Player ${playerId} not found`);
+          }
+
+          if (!player.rank) {
+            console.warn(`Player ${playerId} has no rank, using default rank '新人'`);
+            player.rank = '新人';
+          }
 
           const pointsChange = calculatePointsForPosition(position, validatedData.isHanchan, player.rank);
           const newPoints = player.points + pointsChange;
-          const newRank: RankInfo = getRankByPoints(newPoints);
+          const newRank = getRankByPoints(newPoints);
 
           await tx.player.update({
             where: { id: playerId },

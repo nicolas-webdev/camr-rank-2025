@@ -16,8 +16,8 @@ export type Position = 'east' | 'south' | 'west' | 'north';
 export const ranks: RankInfo[] = [
   {
     kanji: '新人',
-    translation: 'Principiante',
-    pointsToNextRank: 150,
+    translation: 'Beginner',
+    pointsToNextRank: 50,
     pointsToDropRank: null,
     pointsForPosition: {
       hanchan: [60, 30, 0, 0],
@@ -25,10 +25,90 @@ export const ranks: RankInfo[] = [
     }
   },
   {
+    kanji: '9級',
+    translation: '9 Kyu',
+    pointsToNextRank: 50,
+    pointsToDropRank: null,
+    pointsForPosition: {
+      hanchan: [60, 30, 0, 0],
+      tonpuusen: [40, 20, 0, 0]
+    }
+  },
+  {
+    kanji: '8級',
+    translation: '8 Kyu',
+    pointsToNextRank: 100,
+    pointsToDropRank: null,
+    pointsForPosition: {
+      hanchan: [60, 30, 0, 0],
+      tonpuusen: [40, 20, 0, 0]
+    }
+  },
+  {
+    kanji: '7級',
+    translation: '7 Kyu',
+    pointsToNextRank: 100,
+    pointsToDropRank: null,
+    pointsForPosition: {
+      hanchan: [60, 30, 0, 0],
+      tonpuusen: [40, 20, 0, 0]
+    }
+  },
+  {
+    kanji: '6級',
+    translation: '6 Kyu',
+    pointsToNextRank: 100,
+    pointsToDropRank: null,
+    pointsForPosition: {
+      hanchan: [60, 30, 0, 0],
+      tonpuusen: [40, 20, 0, 0]
+    }
+  },
+  {
+    kanji: '5級',
+    translation: '5 Kyu',
+    pointsToNextRank: 100,
+    pointsToDropRank: null,
+    pointsForPosition: {
+      hanchan: [60, 30, 0, 0],
+      tonpuusen: [40, 20, 0, 0]
+    }
+  },
+  {
+    kanji: '4級',
+    translation: '4 Kyu',
+    pointsToNextRank: 100,
+    pointsToDropRank: null,
+    pointsForPosition: {
+      hanchan: [60, 30, 0, 0],
+      tonpuusen: [40, 20, 0, 0]
+    }
+  },
+  {
+    kanji: '3級',
+    translation: '3 Kyu',
+    pointsToNextRank: 100,
+    pointsToDropRank: null,
+    pointsForPosition: {
+      hanchan: [60, 30, 0, 0],
+      tonpuusen: [40, 20, 0, 0]
+    }
+  },
+  {
+    kanji: '2級',
+    translation: '2 Kyu',
+    pointsToNextRank: 150,
+    pointsToDropRank: null,
+    pointsForPosition: {
+      hanchan: [60, 30, 0, -30],
+      tonpuusen: [40, 20, 0, -20]
+    }
+  },
+  {
     kanji: '1級',
     translation: '1 Kyu',
-    pointsToNextRank: 200,
-    pointsToDropRank: false,
+    pointsToNextRank: 150,
+    pointsToDropRank: null,
     pointsForPosition: {
       hanchan: [60, 30, 0, -30],
       tonpuusen: [40, 20, 0, -20]
@@ -37,7 +117,7 @@ export const ranks: RankInfo[] = [
   {
     kanji: '初段',
     translation: '1 Dan',
-    pointsToNextRank: 400,
+    pointsToNextRank: 200,
     pointsToDropRank: false,
     pointsForPosition: {
       hanchan: [60, 30, 0, -30],
@@ -57,7 +137,7 @@ export const ranks: RankInfo[] = [
   {
     kanji: '三段',
     translation: '3 Dan',
-    pointsToNextRank: 600,
+    pointsToNextRank: 400,
     pointsToDropRank: 1600,
     pointsForPosition: {
       hanchan: [60, 30, 0, -30],
@@ -77,7 +157,7 @@ export const ranks: RankInfo[] = [
   {
     kanji: '五段',
     translation: '5 Dan',
-    pointsToNextRank: 800,
+    pointsToNextRank: 600,
     pointsToDropRank: 2600,
     pointsForPosition: {
       hanchan: [60, 30, -15, -45],
@@ -87,7 +167,7 @@ export const ranks: RankInfo[] = [
   {
     kanji: '六段',
     translation: '6 Dan',
-    pointsToNextRank: 1000,
+    pointsToNextRank: 800,
     pointsToDropRank: 3200,
     pointsForPosition: {
       hanchan: [60, 30, -15, -45],
@@ -107,7 +187,7 @@ export const ranks: RankInfo[] = [
   {
     kanji: '八段',
     translation: '8 Dan',
-    pointsToNextRank: 1500,
+    pointsToNextRank: 1000,
     pointsToDropRank: 5000,
     pointsForPosition: {
       hanchan: [60, 30, -30, -60],
@@ -127,7 +207,7 @@ export const ranks: RankInfo[] = [
   {
     kanji: '十段',
     translation: '10 Dan',
-    pointsToNextRank: null,
+    pointsToNextRank: 1500,
     pointsToDropRank: 7500,
     pointsForPosition: {
       hanchan: [60, 30, -45, -75],
@@ -147,23 +227,27 @@ export const ranks: RankInfo[] = [
 ];
 
 export function getRankByPoints(points: number): RankInfo {
-  // Loop through ranks in reverse order to find the highest applicable rank
-  for (let i = ranks.length - 1; i >= 0; i--) {
-    const rank = ranks[i];
-    const nextRank = ranks[i + 1];
-    
-    // If this is the highest rank, return it if points are sufficient
-    if (!rank.pointsToNextRank && points >= 0) {
-      return rank;
-    }
-    
-    // For other ranks, check if points are in the correct range
-    if (nextRank && points >= 0 && points < nextRank.pointsToNextRank!) {
-      return rank;
+  // If points are negative, return beginner rank
+  if (points < 0) {
+    return ranks[0];
+  }
+
+  // Find the current rank based on points
+  for (let i = 0; i < ranks.length; i++) {
+    const currentRank = ranks[i];
+
+    // Stay at current rank if:
+    // 1. We're at the last rank, or
+    // 2. Current rank has no progression (pointsToNextRank is null), or
+    // 3. We don't have enough points to progress to next rank
+    if (i === ranks.length - 1 || 
+        currentRank.pointsToNextRank === null || 
+        points < currentRank.pointsToNextRank) {
+      return currentRank;
     }
   }
   
-  // Return beginner rank if no other rank applies
+  // Fallback to beginner rank (shouldn't happen due to loop logic)
   return ranks[0];
 }
 
@@ -198,30 +282,43 @@ export async function updatePlayerRank(tx: Prisma.TransactionClient, playerId: s
 
 export function calculatePointsForPosition(position: Position | number, isHanchan: boolean, currentRank: string): number {
   const rankInfo = ranks.find(rank => rank.kanji === currentRank);
-  if (!rankInfo) return 0;
+  if (!rankInfo) {
+    console.error(`Invalid rank: ${currentRank}. Using default rank '新人'. Valid ranks are: ${ranks.map(r => r.kanji).join(', ')}`);
+    return ranks[0].pointsForPosition[isHanchan ? 'hanchan' : 'tonpuusen'][
+      typeof position === 'number' ? position : ['east', 'south', 'west', 'north'].indexOf(position)
+    ];
+  }
 
   const positionIndex = typeof position === 'number' ? position : ['east', 'south', 'west', 'north'].indexOf(position);
-  if (positionIndex === -1) return 0;
+  if (positionIndex === -1) {
+    throw new Error(`Invalid position: ${position}. Position must be one of: east, south, west, north, or a number 0-3`);
+  }
 
   return isHanchan ? rankInfo.pointsForPosition.hanchan[positionIndex] : rankInfo.pointsForPosition.tonpuusen[positionIndex];
 }
 
 export function calculateGameRankInfo(game: { isHanchan: boolean; eastPlayerId: string; southPlayerId: string; westPlayerId: string; northPlayerId: string; eastScore: number; southScore: number; westScore: number; northScore: number; }) {
-  const scores = [
-    { playerId: game.eastPlayerId, score: game.eastScore },
-    { playerId: game.southPlayerId, score: game.southScore },
-    { playerId: game.westPlayerId, score: game.westScore },
-    { playerId: game.northPlayerId, score: game.northScore }
+  const positions = [
+    { playerId: game.eastPlayerId, position: 'east' as Position, score: game.eastScore, seatIndex: 0 },
+    { playerId: game.southPlayerId, position: 'south' as Position, score: game.southScore, seatIndex: 1 },
+    { playerId: game.westPlayerId, position: 'west' as Position, score: game.westScore, seatIndex: 2 },
+    { playerId: game.northPlayerId, position: 'north' as Position, score: game.northScore, seatIndex: 3 }
   ];
 
-  // Sort by score in descending order
-  scores.sort((a, b) => b.score - a.score);
-
-  // Create a map of player positions (0-3, where 0 is first place)
-  const positions = new Map<string, number>();
-  scores.forEach((score, index) => {
-    positions.set(score.playerId, index);
+  // Sort by score first, then by seat position (closer to east wins ties)
+  positions.sort((a, b) => {
+    if (a.score !== b.score) {
+      return b.score - a.score;
+    }
+    return a.seatIndex - b.seatIndex;
   });
 
-  return positions;
+  // Map each position to its rank information
+  return positions.map((pos, index) => ({
+    playerId: pos.playerId,
+    position: pos.position,
+    score: pos.score,
+    rank: index + 1,
+    points: calculatePointsForPosition(index, game.isHanchan, '新人') // Use beginner rank for initial calculations
+  }));
 } 
