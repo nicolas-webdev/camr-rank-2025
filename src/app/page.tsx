@@ -10,21 +10,32 @@ type Player = {
   nickname: string;
   points: number;
   rank: string;
+  rating: number;
 };
 
 type Game = {
   id: string;
   date: string;
   isHanchan: boolean;
+  eastPlayerId: string;
   eastPlayer: Player;
   eastScore: number;
+  southPlayerId: string;
   southPlayer: Player;
   southScore: number;
+  westPlayerId: string;
   westPlayer: Player;
   westScore: number;
+  northPlayerId: string;
   northPlayer: Player;
   northScore: number;
   isDeleted: boolean;
+  createdAt: string;
+  createdBy?: { name: string | null };
+  updatedAt: string;
+  updatedBy?: { name: string | null };
+  deletedAt?: string;
+  deletedBy?: { name: string | null };
 };
 
 export default function Home() {
@@ -61,18 +72,43 @@ export default function Home() {
           fetch('/api/players'),
         ]);
 
-        if (!gamesResponse.ok || !playersResponse.ok) {
-          throw new Error('Failed to fetch data');
+        // Debug response status and content type
+        console.log('Games Response:', {
+          status: gamesResponse.status,
+          contentType: gamesResponse.headers.get('content-type'),
+        });
+        console.log('Players Response:', {
+          status: playersResponse.status,
+          contentType: playersResponse.headers.get('content-type'),
+        });
+
+        // Only try to parse JSON if the response is ok and content-type is application/json
+        let gamesData: Game[] = [];
+        let playersData: Player[] = [];
+
+        if (gamesResponse.ok && gamesResponse.headers.get('content-type')?.includes('application/json')) {
+          gamesData = await gamesResponse.json();
+        } else {
+          console.error('Games Response Text:', await gamesResponse.text());
         }
 
-        const [games, players] = await Promise.all([
-          gamesResponse.json(),
-          playersResponse.json(),
-        ]);
+        if (playersResponse.ok && playersResponse.headers.get('content-type')?.includes('application/json')) {
+          playersData = await playersResponse.json();
+        } else {
+          console.error('Players Response Text:', await playersResponse.text());
+        }
 
-        setRecentGames(games);
-        setTopPlayers(players);
-      } catch {
+        setRecentGames(gamesData);
+        setTopPlayers(playersData);
+
+        // Only show error if both requests failed
+        if (!gamesResponse.ok && !playersResponse.ok) {
+          setError('Failed to load data');
+        } else {
+          setError(null);
+        }
+      } catch (err) {
+        console.error('Error fetching data:', err);
         setError('Failed to load data');
       } finally {
         setIsLoading(false);
@@ -197,7 +233,13 @@ export default function Home() {
                     </td>
                     {isAdmin && (
                       <td className="px-4 py-2 text-sm">
-                        <GameActions game={game} onGameUpdated={handleGameUpdated} />
+                        <GameActions
+                          game={{
+                            ...game,
+                            date: new Date(game.date)
+                          }}
+                          onGameUpdated={handleGameUpdated}
+                        />
                       </td>
                     )}
                   </tr>

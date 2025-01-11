@@ -19,8 +19,8 @@ export const config = {
   matcher: [
     '/games/new',
     '/players/new',
-    '/api/games/:path*',
-    '/api/players/:path*',
+    '/api/games/((?!$).*)',
+    '/api/players/((?!$).*)',
     '/api/users/:path*'
   ]
 }; 

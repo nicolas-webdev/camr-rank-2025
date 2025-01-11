@@ -1,8 +1,8 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import React from 'react';
+import { db } from '@/lib';
 import Link from 'next/link';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import GameActions from '@/components/GameActions';
 
 type Player = {
@@ -12,129 +12,105 @@ type Player = {
   rank: string;
 };
 
-type Game = {
+type GameWithDate = {
   id: string;
-  date: string;
+  date: Date;
   isHanchan: boolean;
+  eastPlayerId: string;
   eastPlayer: Player;
   eastScore: number;
+  southPlayerId: string;
   southPlayer: Player;
   southScore: number;
+  westPlayerId: string;
   westPlayer: Player;
   westScore: number;
+  northPlayerId: string;
   northPlayer: Player;
   northScore: number;
   isDeleted: boolean;
 };
 
-type PlayerProfileProps = {
-  params: {
-    id: string;
-  };
-};
+export default async function PlayerProfile({ params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  const id = params.id;
 
-export default function PlayerProfile({ params }: PlayerProfileProps) {
-  const { data: session } = useSession();
-  const [player, setPlayer] = useState<Player | null>(null);
-  const [games, setGames] = useState<Game[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (session?.user?.id) {
-        try {
-          const response = await fetch(`/api/users/${session.user.id}`);
-          if (response.ok) {
-            const data = await response.json();
-            setIsAdmin(data.isAdmin);
-          }
-        } catch {
-          // Ignore error, default to non-admin
-        }
-      }
-    };
-
-    checkAdminStatus();
-  }, [session]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [playerResponse, gamesResponse] = await Promise.all([
-          fetch(`/api/players/${params.id}`),
-          fetch(`/api/players/${params.id}/games`),
-        ]);
-
-        if (!playerResponse.ok || !gamesResponse.ok) {
-          throw new Error('Failed to fetch data');
-        }
-
-        const [playerData, gamesData] = await Promise.all([
-          playerResponse.json(),
-          gamesResponse.json(),
-        ]);
-
-        setPlayer(playerData);
-        setGames(gamesData);
-      } catch {
-        setError('Failed to load data');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [params.id]);
-
-  const handleGameUpdated = () => {
-    // Refetch data when a game is updated
-    setIsLoading(true);
-    setError(null);
-    const fetchData = async () => {
-      try {
-        const [playerResponse, gamesResponse] = await Promise.all([
-          fetch(`/api/players/${params.id}`),
-          fetch(`/api/players/${params.id}/games`),
-        ]);
-
-        if (!playerResponse.ok || !gamesResponse.ok) {
-          throw new Error('Failed to fetch data');
-        }
-
-        const [playerData, gamesData] = await Promise.all([
-          playerResponse.json(),
-          gamesResponse.json(),
-        ]);
-
-        setPlayer(playerData);
-        setGames(gamesData);
-      } catch {
-        setError('Failed to load data');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-      </div>
-    );
+  // Check if user is admin
+  let isAdmin = false;
+  if (session?.user?.id) {
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { isAdmin: true }
+    });
+    isAdmin = !!user?.isAdmin;
   }
 
-  if (error || !player) {
+  // Fetch player data
+  const player = await db.player.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      nickname: true,
+      points: true,
+      rank: true,
+      eastGames: {
+        where: { isDeleted: false },
+        include: {
+          eastPlayer: true,
+          southPlayer: true,
+          westPlayer: true,
+          northPlayer: true,
+        },
+        orderBy: { date: 'desc' },
+      },
+      southGames: {
+        where: { isDeleted: false },
+        include: {
+          eastPlayer: true,
+          southPlayer: true,
+          westPlayer: true,
+          northPlayer: true,
+        },
+        orderBy: { date: 'desc' },
+      },
+      westGames: {
+        where: { isDeleted: false },
+        include: {
+          eastPlayer: true,
+          southPlayer: true,
+          westPlayer: true,
+          northPlayer: true,
+        },
+        orderBy: { date: 'desc' },
+      },
+      northGames: {
+        where: { isDeleted: false },
+        include: {
+          eastPlayer: true,
+          southPlayer: true,
+          westPlayer: true,
+          northPlayer: true,
+        },
+        orderBy: { date: 'desc' },
+      },
+    },
+  });
+
+  if (!player) {
     return (
       <div className="text-red-600 text-center py-8">
-        {error || 'Player not found'}
+        Player not found
       </div>
     );
   }
+
+  // Combine and sort all games
+  const games = [
+    ...player.eastGames,
+    ...player.southGames,
+    ...player.westGames,
+    ...player.northGames,
+  ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -168,7 +144,7 @@ export default function PlayerProfile({ params }: PlayerProfileProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {games.map((game) => {
+            {games.map((game: GameWithDate) => {
               const position =
                 game.eastPlayer.id === player.id ? 'East' :
                   game.southPlayer.id === player.id ? 'South' :
@@ -184,7 +160,7 @@ export default function PlayerProfile({ params }: PlayerProfileProps) {
               return (
                 <tr key={game.id} className={game.isDeleted ? 'bg-red-50' : ''}>
                   <td className="px-4 py-2 text-sm text-gray-900">
-                    {new Date(game.date).toLocaleDateString()}
+                    {game.date.toLocaleDateString()}
                   </td>
                   <td className="px-4 py-2 text-sm text-gray-900">
                     {game.isDeleted ? (
@@ -225,7 +201,7 @@ export default function PlayerProfile({ params }: PlayerProfileProps) {
                   </td>
                   {isAdmin && (
                     <td className="px-4 py-2 text-sm">
-                      <GameActions game={game} onGameUpdated={handleGameUpdated} />
+                      <GameActions game={game} onGameUpdated={() => { }} />
                     </td>
                   )}
                 </tr>

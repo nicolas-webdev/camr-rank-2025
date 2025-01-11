@@ -1,134 +1,64 @@
+'use client';
+
 import React, { useState } from 'react';
 import { GameEditModal } from './GameEditModal';
 import GameHistoryModal from './GameHistoryModal';
-import type { Game } from '@/types/game';
+import type { Game, GameFormData } from '@/types/game';
 
 type GameActionsProps = {
-  game: Game;
+  game: Omit<Game, 'date'> & { date: Date };
   onGameUpdated: () => void;
 };
 
 export default function GameActions({ game, onGameUpdated }: GameActionsProps) {
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this game? This will affect player points and ranks.')) {
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
+  const handleGameUpdate = async (gameData: GameFormData) => {
     try {
       const response = await fetch(`/api/games/${game.id}`, {
-        method: 'DELETE',
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(gameData),
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to delete game');
+        throw new Error('Failed to update game');
       }
 
       onGameUpdated();
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Failed to delete game');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRestore = async () => {
-    if (!confirm('Are you sure you want to restore this game? This will affect player points and ranks.')) {
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`/api/games/${game.id}/restore`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to restore game');
-      }
-
-      onGameUpdated();
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Failed to restore game');
-      }
-    } finally {
-      setIsLoading(false);
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error('Error updating game:', error);
     }
   };
 
   return (
-    <div className="flex items-center space-x-2">
-      {error && (
-        <div className="text-red-600 text-sm mr-2">{error}</div>
-      )}
-
+    <div className="flex space-x-2">
+      <button
+        onClick={() => setIsEditModalOpen(true)}
+        className="text-indigo-600 hover:text-indigo-900"
+      >
+        Edit
+      </button>
       <button
         onClick={() => setShowHistoryModal(true)}
-        className="text-gray-600 hover:text-gray-800"
-        title="View History"
-        disabled={isLoading}
+        className="text-indigo-600 hover:text-indigo-900"
       >
-        📋
+        History
       </button>
 
-      {!game.isDeleted && (
-        <>
-          <button
-            onClick={() => setShowEditModal(true)}
-            className="text-blue-600 hover:text-blue-800"
-            title="Edit Game"
-            disabled={isLoading}
-          >
-            ✏️
-          </button>
-
-          <button
-            onClick={handleDelete}
-            className="text-red-600 hover:text-red-800"
-            title="Delete Game"
-            disabled={isLoading}
-          >
-            🗑️
-          </button>
-        </>
-      )}
-
-      {game.isDeleted && (
-        <button
-          onClick={handleRestore}
-          className="text-green-600 hover:text-green-800"
-          title="Restore Game"
-          disabled={isLoading}
-        >
-          ♻️
-        </button>
-      )}
-
-      {showEditModal && (
-        <GameEditModal
-          game={game}
-          onClose={() => setShowEditModal(false)}
-          onGameUpdated={onGameUpdated}
-        />
-      )}
+      <GameEditModal
+        game={{
+          ...game,
+          date: game.date.toISOString()
+        }}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleGameUpdate}
+      />
 
       {showHistoryModal && (
         <GameHistoryModal

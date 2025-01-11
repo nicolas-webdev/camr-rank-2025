@@ -38,13 +38,43 @@ const gameSchema = z.object({
   }
 );
 
-export async function POST(
-  request: Request
-) {
+// GET is public - no authentication required
+export async function GET() {
+  try {
+    const games = await db.game.findMany({
+      where: {
+        isDeleted: false,
+      },
+      include: {
+        eastPlayer: true,
+        southPlayer: true,
+        westPlayer: true,
+        northPlayer: true,
+        createdBy: {
+          select: { name: true }
+        },
+        updatedBy: {
+          select: { name: true }
+        },
+      },
+      orderBy: {
+        date: 'desc',
+      },
+    });
+
+    return NextResponse.json(games);
+  } catch (error) {
+    console.error('Failed to fetch games:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+// POST requires authentication
+export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions) as ExtendedSession;
     if (!session?.user?.id) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -107,36 +137,6 @@ export async function POST(
       return new NextResponse('Invalid request data', { status: 400 });
     }
     console.error('Failed to create game:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
-  }
-}
-
-export async function GET() {
-  try {
-    const games = await db.game.findMany({
-      where: {
-        isDeleted: false,
-      },
-      include: {
-        eastPlayer: true,
-        southPlayer: true,
-        westPlayer: true,
-        northPlayer: true,
-        createdBy: {
-          select: { name: true }
-        },
-        updatedBy: {
-          select: { name: true }
-        },
-      },
-      orderBy: {
-        date: 'desc',
-      },
-    });
-
-    return NextResponse.json(games);
-  } catch (error) {
-    console.error('Failed to fetch games:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 } 

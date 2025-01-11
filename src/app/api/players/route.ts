@@ -8,43 +8,7 @@ const playerSchema = z.object({
   nickname: z.string().min(2).max(30),
 });
 
-export async function POST(request: Request) {
-  try {
-    const session = await getServerSession();
-    if (!session?.user?.id) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    const body = await request.json();
-    const validatedData = playerSchema.parse(body);
-
-    // Check if player with nickname already exists
-    const existingPlayer = await db.player.findUnique({
-      where: { nickname: validatedData.nickname },
-    });
-
-    if (existingPlayer) {
-      return new NextResponse('Player with this nickname already exists', { status: 400 });
-    }
-
-    // Create new player
-    const player = await db.player.create({
-      data: {
-        userId: session.user.id,
-        nickname: validatedData.nickname,
-      },
-    });
-
-    return NextResponse.json(player);
-  } catch (error) {
-    console.error('Error creating player:', error);
-    if (error instanceof z.ZodError) {
-      return new NextResponse('Invalid request data', { status: 400 });
-    }
-    return new NextResponse('Internal Server Error', { status: 500 });
-  }
-}
-
+// GET is public - no authentication required
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -65,6 +29,8 @@ export async function GET(request: Request) {
         id: true,
         nickname: true,
         rating: true,
+        points: true,
+        rank: true,
         _count: {
           select: {
             eastGames: true,
@@ -94,6 +60,44 @@ export async function GET(request: Request) {
     return NextResponse.json(playersWithRank);
   } catch (error) {
     console.error('Error fetching players:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+// POST requires authentication
+export async function POST(request: Request) {
+  try {
+    const session = await getServerSession();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const validatedData = playerSchema.parse(body);
+
+    // Check if player with nickname already exists
+    const existingPlayer = await db.player.findUnique({
+      where: { nickname: validatedData.nickname },
+    });
+
+    if (existingPlayer) {
+      return NextResponse.json({ error: 'Player with this nickname already exists' }, { status: 400 });
+    }
+
+    // Create new player
+    const player = await db.player.create({
+      data: {
+        userId: session.user.id,
+        nickname: validatedData.nickname,
+      },
+    });
+
+    return NextResponse.json(player);
+  } catch (error) {
+    console.error('Error creating player:', error);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
+    }
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
