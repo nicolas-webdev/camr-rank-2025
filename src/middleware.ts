@@ -4,10 +4,10 @@ import { db } from '@/lib';
 
 export default withAuth(
   async function middleware(req) {
-    // Allow GET requests to player and game details
+    // Allow all GET requests to player and game data
     if (req.method === 'GET' && (
-      req.nextUrl.pathname.startsWith('/api/players/') ||
-      req.nextUrl.pathname.startsWith('/api/games/')
+      req.nextUrl.pathname.startsWith('/api/players') ||
+      req.nextUrl.pathname.startsWith('/api/games')
     )) {
       return NextResponse.next();
     }
@@ -47,7 +47,27 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token
+      // Only require authentication for admin routes
+      authorized: ({ token, req }) => {
+        const isAdminRoute = [
+          '/games/new',
+          '/players/new',
+          '/api/games/new',
+          '/api/players/new',
+        ].includes(req.nextUrl.pathname) || 
+        req.nextUrl.pathname.includes('/edit') ||
+        req.nextUrl.pathname.includes('/delete');
+
+        // Allow public access to GET requests
+        if (req.method === 'GET' && (
+          req.nextUrl.pathname.startsWith('/api/players') ||
+          req.nextUrl.pathname.startsWith('/api/games')
+        )) {
+          return true;
+        }
+
+        return isAdminRoute ? !!token : true;
+      }
     },
     pages: {
       signIn: '/api/auth/signin'
