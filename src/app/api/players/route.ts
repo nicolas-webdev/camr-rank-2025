@@ -85,10 +85,15 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json(playersWithRank);
+    return NextResponse.json(playersWithRank, {
+      headers: { 'content-type': 'application/json' }
+    });
   } catch (error) {
     console.error('Error fetching players:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch players' },
+      { status: 500, headers: { 'content-type': 'application/json' } }
+    );
   }
 }
 
@@ -97,7 +102,10 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions) as ExtendedSession;
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401, headers: { 'content-type': 'application/json' } }
+      );
     }
 
     // Check if user is admin
@@ -107,7 +115,10 @@ export async function POST(request: Request) {
     });
 
     if (!user?.isAdmin) {
-      return NextResponse.json({ error: 'Forbidden - Only admins can create players' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Forbidden - Only admins can create players' },
+        { status: 403, headers: { 'content-type': 'application/json' } }
+      );
     }
 
     const body = await request.json();
@@ -119,7 +130,10 @@ export async function POST(request: Request) {
     });
 
     if (existingPlayer) {
-      return NextResponse.json({ error: 'Player with this nickname already exists' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Player with this nickname already exists' },
+        { status: 400, headers: { 'content-type': 'application/json' } }
+      );
     }
 
     // Create new player
@@ -129,12 +143,20 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json(player);
+    return NextResponse.json(player, {
+      headers: { 'content-type': 'application/json' }
+    });
   } catch (error) {
     console.error('Error creating player:', error);
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid request data', details: error.errors },
+        { status: 400, headers: { 'content-type': 'application/json' } }
+      );
     }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to create player' },
+      { status: 500, headers: { 'content-type': 'application/json' } }
+    );
   }
 }

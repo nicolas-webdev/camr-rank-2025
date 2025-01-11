@@ -62,10 +62,15 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(games);
+    return NextResponse.json(games, {
+      headers: { 'content-type': 'application/json' }
+    });
   } catch (error) {
     console.error('Failed to fetch games:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch games' },
+      { status: 500, headers: { 'content-type': 'application/json' } }
+    );
   }
 }
 
@@ -74,7 +79,10 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions) as ExtendedSession;
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401, headers: { 'content-type': 'application/json' } }
+      );
     }
 
     const body = await request.json();
@@ -131,12 +139,20 @@ export async function POST(request: Request) {
       });
     });
 
-    return NextResponse.json(game);
+    return NextResponse.json(game, {
+      headers: { 'content-type': 'application/json' }
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return new NextResponse('Invalid request data', { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid request data', details: error.errors },
+        { status: 400, headers: { 'content-type': 'application/json' } }
+      );
     }
     console.error('Failed to create game:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to create game' },
+      { status: 500, headers: { 'content-type': 'application/json' } }
+    );
   }
 } 

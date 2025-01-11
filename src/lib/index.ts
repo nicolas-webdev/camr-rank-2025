@@ -1,14 +1,14 @@
-import prisma from './prisma';
+import { db } from './prisma';
 import { calculatePointsForPosition, getRankByPoints, shouldDropRank, updatePlayerRank, calculateGameRankInfo } from './ranking';
 import type { RankInfo, Position } from './ranking';
 
-export { prisma as db };
 export {
+  db,
   calculatePointsForPosition,
   getRankByPoints,
   shouldDropRank,
   updatePlayerRank,
   calculateGameRankInfo,
   type RankInfo,
-  type Position,
+  type Position
 }; 
