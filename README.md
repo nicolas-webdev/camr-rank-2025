@@ -6,7 +6,7 @@ A comprehensive web application for managing a Mahjong league, tracking player r
 
 The Mahjong League application is designed to solve several key challenges in managing competitive Mahjong leagues:
 
-1. **Rank Management**: Automatically handles player progression through different ranks based on their performance, implementing a sophisticated point system that accounts for game results and current player ranks.
+1. **Rank Management**: Automatically handles player progression through different ranks (新人, 9級, etc.) based on their performance, implementing a sophisticated point system that accounts for game results and current player ranks.
 
 2. **Game Recording**: Provides a reliable system for recording game results, including support for both Hanchan (full games) and Tonpuusen (east-only games), with built-in validation and point calculation.
 
@@ -20,7 +20,7 @@ The Mahjong League application is designed to solve several key challenges in ma
 - Create and manage player profiles with unique nicknames
 - Track player rankings and points through an automated system
 - View detailed player statistics including win rates, average positions, and point trends
-- Search players by nickname with real-time suggestions
+- Search players by nickname with real-time suggestions and autocomplete
 - Automatic rank progression/demotion system with protection mechanisms
 
 ### Game Management
@@ -35,17 +35,62 @@ The Mahjong League application is designed to solve several key challenges in ma
 - Secure GitHub OAuth integration for user management
 - Role-based access control distinguishing between admins and regular users
 - Protected routes and API endpoints with proper authorization checks
-- Secure session management with NextAuth.js
+- Edge-compatible authentication using NextAuth.js
+- Public access to view games and player statistics
+- Admin-only access for CUD operations (Create, Update, Delete)
 
 ### Ranking System
 The ranking system is designed to reflect player skill and progression:
 
 - Multiple rank levels with increasing point requirements:
+  - 新人 (Beginner): Starting rank
+  - 9級 (9 Kyu): First promotion
   - Each rank requires more points to achieve and maintain
+- Points awarded based on game position:
+  - Hanchan: +30/+10/-10/-30 points
+  - Tonpuusen: +20/+5/-5/-20 points
 - Automatic rank progression when point thresholds are met
 - Rank protection system to prevent immediate demotion
-- Position-based point calculation that scales with rank
 - Different point scales for Hanchan and Tonpuusen games to reflect game length
+
+## Technical Architecture
+
+### Edge Runtime Compatibility
+The application is designed to run on Edge Runtime (Vercel Edge Functions, Next.js Edge API Routes) with:
+- Prisma with PostgreSQL driver adapter for edge compatibility
+- Edge-compatible authentication middleware
+- Public API routes for read operations
+- Protected routes for admin operations
+
+### Database Configuration
+The application uses PostgreSQL with Prisma ORM, configured for edge compatibility:
+```typescript
+// prisma/schema.prisma
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+```
+
+### API Security
+- Public endpoints:
+  - GET /api/players - List all players
+  - GET /api/players/[id] - Get player details
+  - GET /api/games - List all games
+  - GET /api/games/[id] - Get game details
+
+- Protected endpoints (admin only):
+  - POST /api/players - Create new player
+  - PUT /api/players/[id] - Update player
+  - DELETE /api/players/[id] - Delete player
+  - POST /api/games - Create new game
+  - PUT /api/games/[id] - Update game
+  - DELETE /api/games/[id] - Delete game
 
 ## Project Structure
 
@@ -376,3 +421,39 @@ The most challenging aspects are:
 3. Managing the complexity of the ranking system
 4. Handling concurrent game recordings
 5. Maintaining a complete audit trail
+
+## Edge Deployment Requirements
+
+When deploying to edge environments (e.g., Vercel Edge Functions):
+
+1. Configure PostgreSQL connection:
+   ```typescript
+   import { Pool } from 'pg';
+   import { PrismaPg } from '@prisma/adapter-pg';
+
+   const pool = new Pool({
+     connectionString: process.env.DATABASE_URL,
+     ssl: process.env.NODE_ENV === 'production' ? {
+       rejectUnauthorized: false
+     } : undefined
+   });
+
+   const adapter = new PrismaPg(pool);
+   ```
+
+2. Install required packages:
+   ```bash
+   npm install @prisma/adapter-pg pg
+   ```
+
+3. For Nuxt.js deployments to edge environments, add:
+   ```typescript
+   // nuxt.config.ts
+   export default defineNuxtConfig({
+     nitro: {
+       experimental: {
+         wasm: true
+       }
+     }
+   })
+   ```
