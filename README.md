@@ -4,8 +4,21 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)](https://www.typescriptlang.org/)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4.1-38B2AC)](https://tailwindcss.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+[![Edge Runtime](https://img.shields.io/badge/Edge%20Runtime-compatible-success)](https://vercel.com/docs/functions/edge-functions)
 
 A comprehensive web application for managing a Mahjong league, tracking player rankings, and recording game results. This application serves as a digital platform for Mahjong communities to maintain their competitive leagues, automating the complex process of rank progression and point calculations while providing transparency in game history and player statistics.
+
+## 🌟 Table of Contents
+
+- [Overview](#-overview)
+- [Features](#-features)
+- [Technical Architecture](#-technical-architecture)
+- [Getting Started](#-getting-started)
+- [Development](#-development)
+- [API Documentation](#-api-documentation)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ## 🌟 Overview
 
@@ -80,15 +93,107 @@ The ranking system is designed to reflect player skill and progression through J
 
 ## 🛠️ Technical Architecture
 
-### Edge Runtime Compatibility
-The application is designed to run on Edge Runtime (Vercel Edge Functions, Next.js Edge API Routes) with:
-- Prisma with PostgreSQL driver adapter for edge compatibility
-- Edge-compatible authentication middleware
-- Public API routes for read operations
-- Protected routes for admin operations
+### Runtime Architecture
+The application uses a hybrid runtime approach:
+- **Edge Runtime**: Used specifically for middleware operations
+  - Authentication middleware
+  - Request/response interception
+  - Headers and cookies manipulation
+- **Node.js Runtime**: Main application runtime
+  - API Routes
+  - Server Components
+  - Data fetching and mutations
+- **CDN**: Static assets and cached pages
+  - Static file serving
+  - Cached API responses
+  - Static site generation outputs
+
+### Tech Stack
+- **Frontend**: 
+  - Next.js 15 (Latest with enhanced performance and features)
+  - React 19 (Latest with improved server components)
+  - TypeScript 5
+- **Styling**: 
+  - TailwindCSS 3.4.1
+  - Headless UI components
+- **Database**: 
+  - PostgreSQL with Prisma ORM
+  - Connection pooling for scalability
+- **Authentication**: 
+  - NextAuth.js with GitHub OAuth
+  - Middleware-based auth checks
+- **State Management**: 
+  - Zustand for client state
+  - Server components for server state
+- **Validation**: 
+  - Zod for type-safe validations
+- **Date Handling**: 
+  - date-fns for consistent date operations
+
+### Project Structure
+```
+src/
+├── app/                    # Next.js 13+ App Router
+│   ├── api/               # API Routes
+│   │   ├── auth/         # Authentication endpoints
+│   │   ├── games/        # Game management
+│   │   └── players/      # Player management
+│   ├── games/            # Game-related pages
+│   ├── players/          # Player-related pages
+│   ├── layout.tsx        # Root layout
+│   └── page.tsx          # Home page
+├── components/            # Reusable components
+│   ├── GameActions.tsx   # Game management actions
+│   ├── GameEditModal.tsx # Game editing interface
+│   ├── GameHistoryModal.tsx # Game history viewer
+│   └── PlayerSearch.tsx  # Player search component
+├── lib/                  # Utility functions
+│   ├── ranking.ts        # Ranking calculations
+│   └── index.ts         # Common utilities
+├── types/                # TypeScript definitions
+│   ├── game.ts          # Game-related types
+│   └── player.ts        # Player-related types
+└── middleware.ts         # Edge middleware
+```
+
+### Important Caveats & Gotchas
+
+#### Runtime Considerations
+1. **Middleware Limitations**: Only middleware runs in Edge Runtime - be mindful of Edge Runtime limitations
+2. **API Routes**: Run in Node.js runtime with full Node.js capabilities
+3. **Server Components**: Leverage Next.js 15's enhanced server component features
+
+#### Authentication
+1. **Admin Status**: Admin status is cached client-side and should be re-validated on sensitive operations
+2. **Session Handling**: Edge functions require special session handling with NextAuth
+3. **GitHub OAuth**: Callback URL must match exactly with GitHub OAuth settings
+
+#### Game Management
+1. **Point Calculations**: Always run point calculations server-side to prevent manipulation
+2. **Game Edits**: Game edits trigger cascading point recalculations for all affected players
+3. **Soft Deletes**: Games are soft-deleted to maintain audit trail and allow restoration
+
+#### Player Management
+1. **Rank Changes**: Rank changes should be calculated after all point calculations are complete
+2. **Protection Rules**: Rank protection rules must be checked before any point deductions
+3. **Nickname Uniqueness**: Player nicknames must be unique and are case-insensitive
+
+#### Database
+1. **Migrations**: Always backup before running migrations in production
+2. **Transactions**: Use transactions for operations affecting multiple players
+3. **Indexes**: Custom indexes needed for player search and game history queries
+
+#### Performance
+1. **API Routes**: Some operations might hit edge function execution limits
+2. **Point Calculations**: Heavy calculations should be queued for background processing
+3. **Caching**: Implement caching for frequently accessed data like player rankings
+
+#### Development
+1. **TypeScript**: Strict mode enabled - all types must be properly defined
+2. **Testing**: Mock NextAuth session for admin-only feature tests
+3. **Environment**: Local `.env` must include all required variables
 
 ### Database Configuration
-The application uses PostgreSQL with Prisma ORM, configured for edge compatibility:
 ```typescript
 // prisma/schema.prisma
 generator client {
@@ -108,6 +213,7 @@ datasource db {
 - Node.js 18.x or later
 - PostgreSQL 14.x or later
 - GitHub account (for authentication)
+- pnpm (recommended) or npm
 
 ### Installation
 
@@ -119,7 +225,7 @@ datasource db {
 
 2. Install dependencies
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. Set up environment variables
@@ -143,45 +249,66 @@ datasource db {
 
 4. Set up the database
    ```bash
-   npm run db:setup
+   pnpm db:setup
    ```
 
 5. Start the development server
    ```bash
-   npm run dev
+   pnpm dev
    ```
 
 Visit `http://localhost:3000` to see the application running.
 
-## 📝 Scripts
+## 💻 Development
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run linter
-- `npm run prisma:generate` - Generate Prisma client
-- `npm run prisma:migrate` - Run database migrations
-- `npm run prisma:seed` - Seed database
-- `npm run db:setup` - Set up database (generate, migrate, seed)
+### Available Scripts
 
-## 🧪 Testing
+```bash
+# Development
+pnpm dev          # Start development server with Turbopack
+pnpm build        # Build for production
+pnpm start        # Start production server
+pnpm lint         # Run ESLint
 
-The application uses several testing methodologies:
+# Database
+pnpm prisma:generate  # Generate Prisma client
+pnpm prisma:migrate   # Run database migrations
+pnpm prisma:seed      # Seed database
+pnpm db:setup         # Full database setup
 
-1. **Unit Tests**
-   ```bash
-   npm run test:unit
-   ```
+# Testing
+pnpm test         # Run all tests
+pnpm test:unit    # Run unit tests
+pnpm test:e2e     # Run end-to-end tests
+```
 
-2. **Integration Tests**
-   ```bash
-   npm run test:integration
-   ```
+### Code Style
+- Use TypeScript for type safety
+- Follow ESLint configuration
+- Use Prettier for code formatting
+- Follow React hooks best practices
+- Implement proper error boundaries
+- Write meaningful commit messages
 
-3. **E2E Tests**
-   ```bash
-   npm run test:e2e
-   ```
+## 📚 API Documentation
+
+### Authentication
+- `GET /api/auth/[...nextauth]` - NextAuth.js authentication endpoints
+- `GET /api/users/:id` - Get user details and admin status
+
+### Players
+- `GET /api/players` - List all players
+- `GET /api/players/:id` - Get player details
+- `POST /api/players` - Create new player (admin only)
+- `PUT /api/players/:id` - Update player (admin only)
+- `GET /api/players/:id/games` - Get player's game history
+
+### Games
+- `GET /api/games` - List all games
+- `GET /api/games/:id` - Get game details
+- `POST /api/games` - Record new game (admin only)
+- `PUT /api/games/:id` - Update game (admin only)
+- `DELETE /api/games/:id` - Soft delete game (admin only)
 
 ## 🤝 Contributing
 
@@ -198,6 +325,14 @@ Please ensure your PR adheres to:
 - Proper test coverage
 - Clear commit messages
 - Updated documentation
+
+### Development Guidelines
+1. Write clean, maintainable code
+2. Follow TypeScript best practices
+3. Add proper error handling
+4. Include necessary tests
+5. Update documentation as needed
+6. Consider edge runtime compatibility
 
 ## 📄 License
 
