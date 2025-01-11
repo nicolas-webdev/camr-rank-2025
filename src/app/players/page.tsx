@@ -15,6 +15,7 @@ type Player = {
     name: string;
     minPoints: number;
     maxPoints: number;
+    kanji: string;
   };
 };
 
@@ -104,7 +105,7 @@ export default function PlayersPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-gray-600">Rank</p>
-                  <p className="font-medium">{player.rankInfo.name}</p>
+                  <p className="font-medium">{player.rankInfo.kanji}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Rating</p>

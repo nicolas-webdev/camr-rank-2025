@@ -81,7 +81,7 @@ export async function GET(request: Request) {
       return {
         ...player,
         gamesPlayed: totalGames,
-        rankInfo: getRankByPoints(player.rating)
+        rankInfo: getRankByPoints(player.points)
       };
     });
 
