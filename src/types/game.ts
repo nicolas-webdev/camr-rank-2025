@@ -24,6 +24,7 @@ export interface Game {
 
 export interface GameFormData {
   id: string;
+  date: string;
   isHanchan: boolean;
   eastPlayerId: string;
   eastScore: number;

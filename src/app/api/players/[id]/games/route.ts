@@ -5,55 +5,49 @@ export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const id = await Promise.resolve(params.id);
+  
   try {
     const player = await db.player.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         eastGames: {
           where: { isDeleted: false },
           include: {
-            eastPlayer: { select: { nickname: true } },
-            southPlayer: { select: { nickname: true } },
-            westPlayer: { select: { nickname: true } },
-            northPlayer: { select: { nickname: true } },
-            createdBy: { select: { name: true } },
-            updatedBy: { select: { name: true } },
+            eastPlayer: { select: { id: true, nickname: true } },
+            southPlayer: { select: { id: true, nickname: true } },
+            westPlayer: { select: { id: true, nickname: true } },
+            northPlayer: { select: { id: true, nickname: true } },
           },
           orderBy: { date: 'desc' },
         },
         southGames: {
           where: { isDeleted: false },
           include: {
-            eastPlayer: { select: { nickname: true } },
-            southPlayer: { select: { nickname: true } },
-            westPlayer: { select: { nickname: true } },
-            northPlayer: { select: { nickname: true } },
-            createdBy: { select: { name: true } },
-            updatedBy: { select: { name: true } },
+            eastPlayer: { select: { id: true, nickname: true } },
+            southPlayer: { select: { id: true, nickname: true } },
+            westPlayer: { select: { id: true, nickname: true } },
+            northPlayer: { select: { id: true, nickname: true } },
           },
           orderBy: { date: 'desc' },
         },
         westGames: {
           where: { isDeleted: false },
           include: {
-            eastPlayer: { select: { nickname: true } },
-            southPlayer: { select: { nickname: true } },
-            westPlayer: { select: { nickname: true } },
-            northPlayer: { select: { nickname: true } },
-            createdBy: { select: { name: true } },
-            updatedBy: { select: { name: true } },
+            eastPlayer: { select: { id: true, nickname: true } },
+            southPlayer: { select: { id: true, nickname: true } },
+            westPlayer: { select: { id: true, nickname: true } },
+            northPlayer: { select: { id: true, nickname: true } },
           },
           orderBy: { date: 'desc' },
         },
         northGames: {
           where: { isDeleted: false },
           include: {
-            eastPlayer: { select: { nickname: true } },
-            southPlayer: { select: { nickname: true } },
-            westPlayer: { select: { nickname: true } },
-            northPlayer: { select: { nickname: true } },
-            createdBy: { select: { name: true } },
-            updatedBy: { select: { name: true } },
+            eastPlayer: { select: { id: true, nickname: true } },
+            southPlayer: { select: { id: true, nickname: true } },
+            westPlayer: { select: { id: true, nickname: true } },
+            northPlayer: { select: { id: true, nickname: true } },
           },
           orderBy: { date: 'desc' },
         },
@@ -61,7 +55,10 @@ export async function GET(
     });
 
     if (!player) {
-      return new NextResponse('Player not found', { status: 404 });
+      return NextResponse.json(
+        { error: 'Player not found' },
+        { status: 404 }
+      );
     }
 
     // Combine all games and sort by date
@@ -70,11 +67,14 @@ export async function GET(
       ...player.southGames,
       ...player.westGames,
       ...player.northGames,
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
     return NextResponse.json(games);
   } catch (error) {
-    console.error('Failed to fetch player games:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('Error fetching player games:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 } 

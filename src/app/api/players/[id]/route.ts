@@ -25,61 +25,33 @@ export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const id = await Promise.resolve(params.id);
+  
   try {
     const player = await db.player.findUnique({
-      where: { id: params.id },
-      include: {
-        eastGames: {
-          where: { isDeleted: false },
-          include: {
-            eastPlayer: { select: { nickname: true } },
-            southPlayer: { select: { nickname: true } },
-            westPlayer: { select: { nickname: true } },
-            northPlayer: { select: { nickname: true } },
-          },
-          orderBy: { date: 'desc' },
-        },
-        southGames: {
-          where: { isDeleted: false },
-          include: {
-            eastPlayer: { select: { nickname: true } },
-            southPlayer: { select: { nickname: true } },
-            westPlayer: { select: { nickname: true } },
-            northPlayer: { select: { nickname: true } },
-          },
-          orderBy: { date: 'desc' },
-        },
-        westGames: {
-          where: { isDeleted: false },
-          include: {
-            eastPlayer: { select: { nickname: true } },
-            southPlayer: { select: { nickname: true } },
-            westPlayer: { select: { nickname: true } },
-            northPlayer: { select: { nickname: true } },
-          },
-          orderBy: { date: 'desc' },
-        },
-        northGames: {
-          where: { isDeleted: false },
-          include: {
-            eastPlayer: { select: { nickname: true } },
-            southPlayer: { select: { nickname: true } },
-            westPlayer: { select: { nickname: true } },
-            northPlayer: { select: { nickname: true } },
-          },
-          orderBy: { date: 'desc' },
-        },
-      },
+      where: { id },
+      select: {
+        id: true,
+        nickname: true,
+        points: true,
+        rank: true,
+      }
     });
 
     if (!player) {
-      return new NextResponse('Player not found', { status: 404 });
+      return NextResponse.json(
+        { error: 'Player not found' },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json(player);
   } catch (error) {
-    console.error('Failed to fetch player:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('Error fetching player:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 

@@ -16,6 +16,7 @@ interface ExtendedSession extends Session {
 }
 
 const gameSchema = z.object({
+  id: z.string(),
   date: z.string().datetime(),
   isHanchan: z.boolean(),
   eastPlayerId: z.string(),
@@ -66,8 +67,7 @@ export async function GET(
 
 // Update a game
 export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: Request
 ) {
   try {
     const session = await getServerSession(authOptions) as ExtendedSession;
@@ -86,90 +86,117 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const validatedData = gameSchema.parse(body);
-
-    const game = await db.game.findUnique({
-      where: { id: params.id },
-      include: {
-        eastPlayer: true,
-        southPlayer: true,
-        westPlayer: true,
-        northPlayer: true,
-      }
-    });
-
-    if (!game) {
-      return new NextResponse('Game not found', { status: 404 });
-    }
-
-    // Create a new version of the game with updated data
-    const updatedGame = await db.$transaction(async (tx) => {
-      // Calculate points changes for each player
-      const playerUpdates = [
-        { playerId: game.eastPlayerId, position: 0, score: validatedData.eastScore },
-        { playerId: game.southPlayerId, position: 1, score: validatedData.southScore },
-        { playerId: game.westPlayerId, position: 2, score: validatedData.westScore },
-        { playerId: game.northPlayerId, position: 3, score: validatedData.northScore },
-      ].sort((a, b) => b.score - a.score);
-
-      // Update player points
-      await Promise.all(
-        playerUpdates.map(async ({ playerId, position }) => {
-          const player = await tx.player.findUnique({
-            where: { id: playerId }
-          });
-
-          if (!player) return;
-
-          const pointsChange = calculatePointsForPosition(position, validatedData.isHanchan, player.points.toString());
-          const newPoints = player.points + pointsChange;
-          const newRank = getRankByPoints(newPoints);
-
-          await tx.player.update({
-            where: { id: playerId },
-            data: {
-              points: newPoints,
-              rank: newRank.kanji,
-            },
-          });
-        })
-      );
-
-      // Update the game
-      return tx.game.update({
-        where: { id: params.id },
-        data: {
-          ...validatedData,
-          updatedById: session.user.id,
-        },
+    
+    try {
+      const validatedData = gameSchema.parse(body);
+      
+      // Verify the game exists
+      const game = await db.game.findUnique({
+        where: { id: validatedData.id },
         include: {
           eastPlayer: true,
           southPlayer: true,
           westPlayer: true,
           northPlayer: true,
-        },
+        }
       });
-    });
 
-    return NextResponse.json(updatedGame);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return new NextResponse('Invalid request data', { status: 400 });
+      if (!game) {
+        return new NextResponse('Game not found', { status: 404 });
+      }
+
+      // Create a new version of the game with updated data
+      const updatedGame = await db.$transaction(async (tx) => {
+        // Calculate points changes for each player
+        const playerUpdates = [
+          { playerId: validatedData.eastPlayerId, position: 0, score: validatedData.eastScore },
+          { playerId: validatedData.southPlayerId, position: 1, score: validatedData.southScore },
+          { playerId: validatedData.westPlayerId, position: 2, score: validatedData.westScore },
+          { playerId: validatedData.northPlayerId, position: 3, score: validatedData.northScore },
+        ].sort((a, b) => b.score - a.score);
+
+        // Update player points
+        await Promise.all(
+          playerUpdates.map(async ({ playerId, position }) => {
+            const player = await tx.player.findUnique({
+              where: { id: playerId }
+            });
+
+            if (!player) return;
+
+            const pointsChange = calculatePointsForPosition(position, validatedData.isHanchan, player.points.toString());
+            const newPoints = player.points + pointsChange;
+            const newRank = getRankByPoints(newPoints);
+
+            await tx.player.update({
+              where: { id: playerId },
+              data: {
+                points: newPoints,
+                rank: newRank.kanji,
+              },
+            });
+          })
+        );
+
+        // Update the game
+        return tx.game.update({
+          where: { id: validatedData.id },
+          data: {
+            date: new Date(validatedData.date),
+            isHanchan: validatedData.isHanchan,
+            eastPlayerId: validatedData.eastPlayerId,
+            eastScore: validatedData.eastScore,
+            southPlayerId: validatedData.southPlayerId,
+            southScore: validatedData.southScore,
+            westPlayerId: validatedData.westPlayerId,
+            westScore: validatedData.westScore,
+            northPlayerId: validatedData.northPlayerId,
+            northScore: validatedData.northScore,
+            updatedById: session.user.id,
+          },
+          include: {
+            eastPlayer: true,
+            southPlayer: true,
+            westPlayer: true,
+            northPlayer: true,
+          },
+        });
+      });
+
+      return NextResponse.json(updatedGame);
+    } catch (validationError) {
+      if (validationError instanceof z.ZodError) {
+        return new NextResponse(
+          JSON.stringify({ 
+            error: 'Invalid request data', 
+            details: validationError.errors 
+          }), 
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      throw validationError;
     }
+  } catch (error) {
     console.error('Failed to update game:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return new NextResponse(
+      JSON.stringify({ error: 'Internal Server Error' }), 
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }
 
 // Delete a game
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params: { id } }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions) as ExtendedSession;
     if (!session?.user?.id) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return new NextResponse(
+        JSON.stringify({ error: 'Unauthorized' }), 
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     // Check if user is admin
@@ -179,11 +206,14 @@ export async function DELETE(
     });
 
     if (!user?.isAdmin) {
-      return new NextResponse('Forbidden - Only admins can delete games', { status: 403 });
+      return new NextResponse(
+        JSON.stringify({ error: 'Forbidden - Only admins can delete games' }), 
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     const game = await db.game.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         eastPlayer: true,
         southPlayer: true,
@@ -193,18 +223,24 @@ export async function DELETE(
     });
 
     if (!game) {
-      return new NextResponse('Game not found', { status: 404 });
+      return new NextResponse(
+        JSON.stringify({ error: 'Game not found' }), 
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     if (game.isDeleted) {
-      return new NextResponse('Game is already deleted', { status: 400 });
+      return new NextResponse(
+        JSON.stringify({ error: 'Game is already deleted' }), 
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     // Soft delete the game and update player points
     await db.$transaction(async (tx) => {
       // Mark game as deleted
       await tx.game.update({
-        where: { id: params.id },
+        where: { id },
         data: {
           isDeleted: true,
           deletedAt: new Date(),
@@ -241,9 +277,15 @@ export async function DELETE(
       ]);
     });
 
-    return new NextResponse(null, { status: 204 });
+    return new NextResponse(
+      JSON.stringify({ message: 'Game deleted successfully' }), 
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
     console.error('Failed to delete game:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return new NextResponse(
+      JSON.stringify({ error: 'Internal Server Error' }), 
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 } 

@@ -3,6 +3,18 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { db } from '@/lib';
 import { getRankByPoints } from '@/lib/ranking';
+import { authOptions } from '../auth/[...nextauth]/route';
+import type { Session } from 'next-auth';
+
+// Extend Session type to include id
+interface ExtendedSession extends Session {
+  user: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  }
+}
 
 const playerSchema = z.object({
   nickname: z.string().min(2).max(30),
@@ -67,9 +79,19 @@ export async function GET(request: Request) {
 // POST requires authentication
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions) as ExtendedSession;
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { isAdmin: true }
+    });
+
+    if (!user?.isAdmin) {
+      return NextResponse.json({ error: 'Forbidden - Only admins can create players' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -87,7 +109,6 @@ export async function POST(request: Request) {
     // Create new player
     const player = await db.player.create({
       data: {
-        userId: session.user.id,
         nickname: validatedData.nickname,
       },
     });
