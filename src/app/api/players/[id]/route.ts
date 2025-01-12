@@ -1,4 +1,22 @@
-import { NextResponse } from 'next/server';
+/**
+ * IMPORTANT: Next.js 15+ Route Handler Parameter Types
+ * 
+ * In Next.js 15+, dynamic route parameters in route handlers must be handled as Promises.
+ * The context parameter should be typed as: { params: Promise<{ paramName: string }> }
+ * 
+ * Example:
+ * export async function GET(
+ *   request: Request,
+ *   context: { params: Promise<{ id: string }> }
+ * ) {
+ *   const { id } = await context.params;
+ *   // ... rest of the handler
+ * }
+ * 
+ * Reference: https://nextjs.org/docs/app/api-reference/file-conventions/route#context-optional
+ */
+
+import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib';
@@ -106,14 +124,13 @@ const playerSchema = z.object({
 });
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+): Promise<NextResponse> {
+  const { id } = await context.params;
   try {
-    const { id: playerId } = await params;
-
     const player = await db.player.findUnique({
-      where: { id: playerId },
+      where: { id },
       include: playerInclude
     }) as PlayerWithGames | null;
 

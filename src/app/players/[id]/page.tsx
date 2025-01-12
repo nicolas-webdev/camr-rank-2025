@@ -3,14 +3,13 @@ import { db } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 
 interface PlayerPageProps {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata({ params }: PlayerPageProps) {
+  const { id } = await params;
   const player = await db.player.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { nickname: true },
   });
 
@@ -27,9 +26,10 @@ export async function generateMetadata({ params }: PlayerPageProps) {
 }
 
 export default async function PlayerPage({ params }: PlayerPageProps) {
+  const { id } = await params;
   // Verify player exists
   const player = await db.player.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { id: true },
   });
 
@@ -39,7 +39,7 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
 
   return (
     <main className="container mx-auto px-4 py-8">
-      <PlayerProfile playerId={params.id} />
+      <PlayerProfile playerId={id} />
     </main>
   );
 } 

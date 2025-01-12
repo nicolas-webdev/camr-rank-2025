@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { db, recalculateAllPoints } from '@/lib';
+import { db } from '@/lib';
+import { recalculateAllPoints } from '@/lib/ranking';
 import type { Session } from 'next-auth';
 
 // Extend Session type to include id

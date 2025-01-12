@@ -1,10 +1,13 @@
 import Link from 'next/link';
 
-export default function AuthError({
+interface PageProps {
+  searchParams: Promise<{ error?: string }>;
+}
+
+export default async function AuthError({
   searchParams,
-}: {
-  searchParams: { error?: string };
-}) {
+}: PageProps) {
+  const params = await searchParams;
   const errorMessages: Record<string, string> = {
     Configuration: 'There is a problem with the server configuration.',
     AccessDenied: 'You do not have permission to sign in.',
@@ -21,7 +24,7 @@ export default function AuthError({
     Default: 'Unable to sign in.',
   };
 
-  const error = searchParams.error;
+  const error = params.error;
   const errorMessage = error ? errorMessages[error] ?? errorMessages.Default : errorMessages.Default;
 
   return (

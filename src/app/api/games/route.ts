@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
 import { db } from '@/lib';
-import { calculatePointsForPosition, getRankByPoints } from '@/lib/ranking';
+import { calculatePointsForPosition, getRankByPoints, recalculateAllPoints } from '@/lib/ranking';
 import type { Session } from 'next-auth';
 import type { Position as GamePosition } from '@/lib/ranking';
 import type { RankTitle } from '@/lib/ranking';
@@ -333,6 +333,9 @@ export async function POST(request: Request) {
           }
         }
       });
+
+      // Recalculate all points and ranks after game creation
+      await recalculateAllPoints(tx);
 
       return { game, positions, ratingChanges: Array.from(ratingChanges.entries()) };
     });
