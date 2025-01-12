@@ -320,9 +320,10 @@ export type RankTitle = keyof typeof RANK_THRESHOLDS;
  * @returns The appropriate rank based on points and demotion rules
  */
 export function getRankByPoints(points: number, currentRank?: RankTitle): RankTitle {
+  const ranks = Object.entries(RANK_THRESHOLDS) as [RankTitle, typeof RANK_THRESHOLDS[RankTitle]][];
+
   // If no current rank, treat as new player
   if (!currentRank) {
-    const ranks = Object.entries(RANK_THRESHOLDS) as [RankTitle, typeof RANK_THRESHOLDS[RankTitle]][];
     for (let i = ranks.length - 1; i >= 0; i--) {
       const [rank, info] = ranks[i];
       if (points >= info.min) {
@@ -332,40 +333,49 @@ export function getRankByPoints(points: number, currentRank?: RankTitle): RankTi
     return '新人';
   }
 
-  // Handle special cases first
-  // 1. 新人 through 1級 cannot lose points
-  if (currentRank === '新人' || (currentRank.endsWith('級') && points < RANK_THRESHOLDS[currentRank].min)) {
+  // Get current rank info
+  const currentRankInfo = RANK_THRESHOLDS[currentRank];
+  const currentRankIndex = ranks.findIndex(([rank]) => rank === currentRank);
+  const nextRank = currentRankIndex < ranks.length - 1 ? ranks[currentRankIndex + 1][0] : null;
+
+  // Handle special cases
+  // 1. 新人 through 1級 cannot lose points/be demoted
+  if (currentRank === '新人' || currentRank.endsWith('級')) {
+    // But they can still be promoted
+    if (nextRank && points >= RANK_THRESHOLDS[nextRank].min) {
+      return nextRank;
+    }
     return currentRank;
   }
 
   // 2. 初段 and 神室王 cannot be demoted
-  if ((currentRank === '初段' || currentRank === '神室王') && points < RANK_THRESHOLDS[currentRank].min) {
+  if (currentRank === '初段' || currentRank === '神室王') {
+    // But 初段 can still be promoted
+    if (currentRank === '初段' && nextRank && points >= RANK_THRESHOLDS[nextRank].min) {
+      return nextRank;
+    }
     return currentRank;
   }
 
-  // For all other ranks, check if they should be demoted
-  const ranks = Object.entries(RANK_THRESHOLDS) as [RankTitle, typeof RANK_THRESHOLDS[RankTitle]][];
-  
-  // First check if player should be promoted
-  for (let i = ranks.length - 1; i >= 0; i--) {
-    const [rank, info] = ranks[i];
-    if (points >= info.min) {
-      return rank;
-    }
+  // For all other ranks (二段 through 十段)
+  // First check for promotion
+  if (nextRank && points >= RANK_THRESHOLDS[nextRank].min) {
+    return nextRank;
   }
 
-  // If we get here and the player is 二段 or higher, they should be demoted if below their rank's minimum
-  if (points < RANK_THRESHOLDS[currentRank].min) {
+  // Then check for demotion
+  if (points < currentRankInfo.min) {
     // Find the highest rank they qualify for
-    for (let i = ranks.length - 1; i >= 0; i--) {
+    for (let i = currentRankIndex - 1; i >= 0; i--) {
       const [rank, info] = ranks[i];
       if (points >= info.min) {
         return rank;
       }
     }
+    return '新人';  // Fallback to beginner if somehow below all ranks
   }
 
-  // If no demotion conditions are met, keep current rank
+  // No change in rank
   return currentRank;
 }
 
@@ -514,28 +524,45 @@ export async function recalculateAllPoints(tx: Prisma.TransactionClient) {
 
   // Replay each game in chronological order
   for (const game of games) {
+    // Get current ranks for all players before calculating points
+    const [eastPlayer, southPlayer, westPlayer, northPlayer] = await Promise.all([
+      tx.player.findUnique({ where: { id: game.eastPlayerId }, select: { rank: true, points: true } }),
+      tx.player.findUnique({ where: { id: game.southPlayerId }, select: { rank: true, points: true } }),
+      tx.player.findUnique({ where: { id: game.westPlayerId }, select: { rank: true, points: true } }),
+      tx.player.findUnique({ where: { id: game.northPlayerId }, select: { rank: true, points: true } })
+    ]);
+
+    if (!eastPlayer || !southPlayer || !westPlayer || !northPlayer) {
+      console.error('Missing player in game:', game.id);
+      continue;
+    }
+
+    // Sort positions by score, with wind position as tiebreaker
     const positions = [
-      { playerId: game.eastPlayerId, score: game.eastScore },
-      { playerId: game.southPlayerId, score: game.southScore },
-      { playerId: game.westPlayerId, score: game.westScore },
-      { playerId: game.northPlayerId, score: game.northScore },
-    ].sort((a, b) => b.score - a.score);
+      { playerId: game.eastPlayerId, score: game.eastScore, position: 'east' as Position, rank: eastPlayer.rank as RankTitle, currentPoints: eastPlayer.points },
+      { playerId: game.southPlayerId, score: game.southScore, position: 'south' as Position, rank: southPlayer.rank as RankTitle, currentPoints: southPlayer.points },
+      { playerId: game.westPlayerId, score: game.westScore, position: 'west' as Position, rank: westPlayer.rank as RankTitle, currentPoints: westPlayer.points },
+      { playerId: game.northPlayerId, score: game.northScore, position: 'north' as Position, rank: northPlayer.rank as RankTitle, currentPoints: northPlayer.points }
+    ].sort((a, b) => {
+      // First compare by score
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      // If scores are equal, use wind position as tie-breaker
+      const windPriority = { east: 0, south: 1, west: 2, north: 3 };
+      return windPriority[a.position] - windPriority[b.position];
+    });
 
-    // Update each player's points based on their position
+    // Update each player's points based on their position and current rank
     for (let i = 0; i < positions.length; i++) {
-      const { playerId } = positions[i];
+      const { playerId, rank, currentPoints } = positions[i];
       
-      // Get player's current points before updating
-      const player = await tx.player.findUnique({
-        where: { id: playerId }
-      });
-
-      if (!player) continue;
-
       // Calculate points based on current rank and position
-      const pointsChange = calculatePointsForPosition(i, game.isHanchan, player.rank as RankTitle);
-      const newPoints = player.points + pointsChange;
-      const newRank = getRankByPoints(newPoints, player.rank as RankTitle);
+      const pointsChange = calculatePointsForPosition(i, game.isHanchan, rank);
+      
+      // Calculate new points and rank
+      const newPoints = currentPoints + pointsChange;
+      const newRank = getRankByPoints(newPoints, rank);
 
       // Update player's points and rank
       await tx.player.update({

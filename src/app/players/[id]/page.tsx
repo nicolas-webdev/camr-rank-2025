@@ -25,6 +25,8 @@ export async function generateMetadata({ params }: PlayerPageProps) {
   };
 }
 
+export const revalidate = 0; // Revalidate this page on every request
+
 export default async function PlayerPage({ params }: PlayerPageProps) {
   const { id } = await params;
   // Verify player exists

@@ -207,6 +207,38 @@ datasource db {
 }
 ```
 
+### Data Revalidation & Caching Strategy
+
+The application implements a comprehensive data revalidation strategy to ensure data consistency across all pages:
+
+#### Server Components
+- All server components use `revalidate = 0` to ensure fresh data on every request
+- This includes:
+  - Player profile pages (`/players/[id]`)
+  - Players list page (`/players`)
+  - Individual game pages (`/games/[id]`)
+
+#### API Routes
+- API routes trigger revalidation of affected pages after data mutations
+- Key revalidation points:
+  - Game creation/update/deletion
+  - Player rank changes
+  - Point recalculations
+
+#### Revalidation Paths
+After game-related operations, the following paths are revalidated:
+```typescript
+revalidatePath('/');               // Home page
+revalidatePath('/players');        // Players list
+revalidatePath('/players/[id]');   // Individual player profiles
+revalidatePath('/games');          // Games list
+```
+
+#### Client Components
+- Client components fetch fresh data through API routes
+- Implement optimistic updates where appropriate
+- Use SWR or React Query for client-side caching (planned feature)
+
 ## 🚀 Getting Started
 
 ### Prerequisites

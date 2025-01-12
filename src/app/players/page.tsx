@@ -8,6 +8,8 @@ export const metadata = {
   description: 'View all registered players and their rankings.',
 };
 
+export const revalidate = 0; // Revalidate this page on every request
+
 export default async function PlayersPage() {
   const players = await db.player.findMany({
     orderBy: [

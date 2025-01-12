@@ -3,10 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
 import { db } from '@/lib';
-import { calculatePointsForPosition, getRankByPoints, recalculateAllPoints } from '@/lib/ranking';
+import { calculatePointsForPosition, getRankByPoints } from '@/lib/ranking';
 import type { Session } from 'next-auth';
 import type { Position as GamePosition } from '@/lib/ranking';
 import type { RankTitle } from '@/lib/ranking';
+import { revalidatePath } from 'next/cache';
 
 // Extend Session type to include id
 interface ExtendedSession extends Session {
@@ -52,9 +53,18 @@ const gameSchema = z.object({
 // GET is public - no authentication required
 export async function GET() {
   try {
+    // Check if user is admin
+    const session = await getServerSession(authOptions) as ExtendedSession;
+    const user = session?.user?.id ? await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { isAdmin: true }
+    }) : null;
+    const isAdmin = !!user?.isAdmin;
+
     const games = await db.game.findMany({
       where: {
-        isDeleted: false,
+        // Only show deleted games to admins
+        isDeleted: isAdmin ? undefined : false,
       },
       include: {
         eastPlayer: true,
@@ -256,7 +266,7 @@ export async function POST(request: Request) {
         });
 
         const newPoints = player.points + pointsChange;
-        const newRank = getRankByPoints(newPoints);
+        const newRank = getRankByPoints(newPoints, player.rank as RankTitle);
 
         // Store rating change information (keeping ratings fixed at 1500)
         ratingChanges.set(playerId, {
@@ -334,11 +344,14 @@ export async function POST(request: Request) {
         }
       });
 
-      // Recalculate all points and ranks after game creation
-      await recalculateAllPoints(tx);
-
       return { game, positions, ratingChanges: Array.from(ratingChanges.entries()) };
     });
+
+    // Revalidate all pages that show player data
+    revalidatePath('/');
+    revalidatePath('/players');
+    revalidatePath('/players/[id]', 'page');
+    revalidatePath('/games');
 
     return NextResponse.json(result, {
       headers: { 'content-type': 'application/json' }
