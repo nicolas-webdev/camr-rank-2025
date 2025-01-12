@@ -1,4 +1,5 @@
 import { db } from '@/lib/prisma';
+import { Game, Prisma } from '@prisma/client';
 
 type PlayerStats = {
   totalGames: number;
@@ -74,7 +75,12 @@ export async function calculatePlayerStats(playerId: string): Promise<PlayerStat
   };
 
   // Process each game
-  games.forEach((game) => {
+  games.forEach((game: Game & { 
+    eastPlayer: { id: string };
+    southPlayer: { id: string };
+    westPlayer: { id: string };
+    northPlayer: { id: string };
+  }) => {
     const scores = [
       { playerId: game.eastPlayerId, score: game.eastScore },
       { playerId: game.southPlayerId, score: game.southScore },
@@ -160,7 +166,7 @@ export async function calculatePlayerStats(playerId: string): Promise<PlayerStat
     : 0;
 
   // Update stats in database
-  await db.$transaction(async (tx) => {
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.stats.upsert({
       where: {
         playerId,
@@ -182,7 +188,7 @@ export async function updatePlayerRating(
   newRating: number,
   change: number
 ) {
-  await db.$transaction(async (tx) => {
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const player = await tx.player.findUnique({
       where: { id: playerId },
     });

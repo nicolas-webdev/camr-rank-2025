@@ -223,6 +223,9 @@ export async function POST(request: Request) {
       })));
 
       // Track rating changes for each player
+      // NOTE: As of now, ratings are fixed at 1500 and do not change.
+      // A proper rating system will be implemented in the future as a parallel system to ranks.
+      // For now, we only track rank changes and points.
       const ratingChanges = new Map<string, { 
         oldRating: number;
         newRating: number;
@@ -255,13 +258,13 @@ export async function POST(request: Request) {
         const newPoints = player.points + pointsChange;
         const newRank = getRankByPoints(newPoints);
 
-        // Store rating change information
+        // Store rating change information (keeping ratings fixed at 1500)
         ratingChanges.set(playerId, {
-          oldRating: player.rating,
-          newRating: player.rating + pointsChange,
+          oldRating: 1500,
+          newRating: 1500,
           pointsBeforeGame: player.points,
           pointsAfterGame: newPoints,
-          change: pointsChange
+          change: 0  // No rating changes for now
         });
 
         // Update player stats based on finishing position
@@ -279,14 +282,14 @@ export async function POST(request: Request) {
           }
         });
 
-        // Update player with new rating and rank
+        // Update player with new rank and points (keeping rating fixed at 1500)
         await tx.player.update({
           where: { id: playerId },
           data: {
             points: newPoints,
             rank: newRank,
-            rating: player.rating + pointsChange,
-            maxRating: Math.max(player.maxRating, player.rating + pointsChange)
+            rating: 1500,  // Keep rating fixed at 1500
+            maxRating: 1500  // Keep max rating fixed at 1500
           }
         });
 

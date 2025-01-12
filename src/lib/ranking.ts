@@ -228,27 +228,28 @@ export const ranks: RankInfo[] = [
 
 // Rank thresholds and requirements
 const RANK_THRESHOLDS = {
-  '新人': { min: 0, next: 100, title: 'Beginner' },
-  '9級': { min: 100, next: 200, title: '9th Kyu' },
-  '8級': { min: 200, next: 400, title: '8th Kyu' },
-  '7級': { min: 400, next: 800, title: '7th Kyu' },
-  '6級': { min: 800, next: 1200, title: '6th Kyu' },
-  '5級': { min: 1200, next: 2000, title: '5th Kyu' },
-  '4級': { min: 2000, next: 3000, title: '4th Kyu' },
-  '3級': { min: 3000, next: 4000, title: '3rd Kyu' },
-  '2級': { min: 4000, next: 5000, title: '2nd Kyu' },
-  '1級': { min: 5000, next: 6000, title: '1st Kyu' },
-  '初段': { min: 6000, next: 8000, title: '1st Dan' },
-  '二段': { min: 8000, next: 10000, title: '2nd Dan' },
-  '三段': { min: 10000, next: 12000, title: '3rd Dan' },
-  '四段': { min: 12000, next: 15000, title: '4th Dan' },
-  '五段': { min: 15000, next: 20000, title: '5th Dan' },
-  '六段': { min: 20000, next: 30000, title: '6th Dan' },
-  '七段': { min: 30000, next: 50000, title: '7th Dan' },
-  '八段': { min: 50000, next: 75000, title: '8th Dan' },
-  '九段': { min: 75000, next: 100000, title: '9th Dan' },
-  '十段': { min: 100000, next: null, title: '10th Dan' },
-} as const;
+  '新人': { min: 0, next: 50, title: 'Beginner' },
+  '9級': { min: 50, next: 100, title: '9th Kyu' },
+  '8級': { min: 100, next: 200, title: '8th Kyu' },
+  '7級': { min: 200, next: 300, title: '7th Kyu' },
+  '6級': { min: 300, next: 400, title: '6th Kyu' },
+  '5級': { min: 400, next: 500, title: '5th Kyu' },
+  '4級': { min: 500, next: 600, title: '4th Kyu' },
+  '3級': { min: 600, next: 700, title: '3rd Kyu' },
+  '2級': { min: 700, next: 850, title: '2nd Kyu' },
+  '1級': { min: 850, next: 1000, title: '1st Kyu' },
+  '初段': { min: 1000, next: 1200, title: '1st Dan' },
+  '二段': { min: 1200, next: 1600, title: '2nd Dan' },
+  '三段': { min: 1600, next: 2000, title: '3rd Dan' },
+  '四段': { min: 2000, next: 2600, title: '4th Dan' },
+  '五段': { min: 2600, next: 3200, title: '5th Dan' },
+  '六段': { min: 3200, next: 4000, title: '6th Dan' },
+  '七段': { min: 4000, next: 5000, title: '7th Dan' },
+  '八段': { min: 5000, next: 6000, title: '8th Dan' },
+  '九段': { min: 6000, next: 7500, title: '9th Dan' },
+  '十段': { min: 7500, next: 9000, title: '10th Dan' },
+  '神室王': { min: 9000, next: null, title: 'Rey Dios' }
+};
 
 export type RankTitle = keyof typeof RANK_THRESHOLDS;
 

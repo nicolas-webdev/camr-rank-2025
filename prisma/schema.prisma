@@ -71,8 +71,10 @@ model Player {
   mahjongSoulName String?
   
   // Ranking Information
-  rating          Float     @default(1500)
-  maxRating       Float     @default(1500)
+  // NOTE: As of now (2024), ratings are fixed at 1500 and do not change.
+  // A proper rating system will be implemented in the future as a parallel system to ranks.
+  rating          Float     @default(1500)  // Currently fixed at 1500
+  maxRating       Float     @default(1500)  // Currently fixed at 1500
   points          Int       @default(0)
   rank            String    @default("新人")
   rankProgress    Float     @default(0) // Progress to next rank (0-100)
