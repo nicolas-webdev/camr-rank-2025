@@ -250,35 +250,51 @@ export default function Home() {
         </div>
 
         <div>
-          <h2 className="text-2xl font-bold mb-4">Top Players</h2>
-          <div className="bg-white shadow rounded-lg overflow-hidden">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Top Players</h2>
+            <Link
+              href="/players"
+              className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+            >
+              View All
+            </Link>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
             <table className="min-w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Rank</th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Player</th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Points</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-300">Rank</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-300">Player</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-300">Rating</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-300">Points</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
-                {topPlayers.map((player, index) => (
-                  <tr key={player.id}>
-                    <td className="px-4 py-2 text-sm text-gray-900">
-                      {index + 1}
-                    </td>
-                    <td className="px-4 py-2 text-sm">
-                      <Link href={`/players/${player.id}`} className="text-indigo-600 hover:text-indigo-900">
-                        {player.nickname}
-                      </Link>
-                      <span className="ml-2 text-gray-500">
-                        {player.rank}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-sm text-gray-900">
-                      {player.points}
-                    </td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {topPlayers
+                  .sort((a, b) => b.points - a.points)
+                  .slice(0, 10)
+                  .map((player) => (
+                    <tr key={player.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-4 py-2 text-sm">
+                        <span className="font-medium text-gray-900 dark:text-white">{player.rank}</span>
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        <Link
+                          href={`/players/${player.id}`}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline font-medium"
+                        >
+                          {player.nickname}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                        {player.rating.toFixed(1)}
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                        {player.points.toFixed(1)}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>

@@ -226,43 +226,136 @@ export const ranks: RankInfo[] = [
   }
 ];
 
-export function getRankByPoints(points: number): RankInfo {
-  // If points are negative, return beginner rank
-  if (points < 0) {
-    return ranks[0];
+// Rank thresholds and requirements
+const RANK_THRESHOLDS = {
+  '新人': { min: 0, next: 100, title: 'Beginner' },
+  '9級': { min: 100, next: 200, title: '9th Kyu' },
+  '8級': { min: 200, next: 400, title: '8th Kyu' },
+  '7級': { min: 400, next: 800, title: '7th Kyu' },
+  '6級': { min: 800, next: 1200, title: '6th Kyu' },
+  '5級': { min: 1200, next: 2000, title: '5th Kyu' },
+  '4級': { min: 2000, next: 3000, title: '4th Kyu' },
+  '3級': { min: 3000, next: 4000, title: '3rd Kyu' },
+  '2級': { min: 4000, next: 5000, title: '2nd Kyu' },
+  '1級': { min: 5000, next: 6000, title: '1st Kyu' },
+  '初段': { min: 6000, next: 8000, title: '1st Dan' },
+  '二段': { min: 8000, next: 10000, title: '2nd Dan' },
+  '三段': { min: 10000, next: 12000, title: '3rd Dan' },
+  '四段': { min: 12000, next: 15000, title: '4th Dan' },
+  '五段': { min: 15000, next: 20000, title: '5th Dan' },
+  '六段': { min: 20000, next: 30000, title: '6th Dan' },
+  '七段': { min: 30000, next: 50000, title: '7th Dan' },
+  '八段': { min: 50000, next: 75000, title: '8th Dan' },
+  '九段': { min: 75000, next: 100000, title: '9th Dan' },
+  '十段': { min: 100000, next: null, title: '10th Dan' },
+} as const;
+
+export type RankTitle = keyof typeof RANK_THRESHOLDS;
+
+/**
+ * Calculate the progress to the next rank and points needed
+ */
+export function calculateRankProgress(points: number, currentRank: RankTitle) {
+  const rankInfo = RANK_THRESHOLDS[currentRank];
+  
+  // If at max rank, return 100% progress
+  if (rankInfo.next === null) {
+    return {
+      progress: 100,
+      pointsNeeded: 0,
+    };
   }
 
-  let cumulativePoints = 0;
-  
-  // Loop through ranks to find where the points fall
-  for (let i = 0; i < ranks.length - 1; i++) {
-    const currentRank = ranks[i];
-    
-    // Skip if this rank has no progression
-    if (currentRank.pointsToNextRank === null) {
-      return currentRank;
-    }
-    
-    // Calculate points needed for next rank
-    cumulativePoints += currentRank.pointsToNextRank;
-    
-    // If we haven't reached enough points for the next rank, stay at current rank
-    if (points < cumulativePoints) {
-      return currentRank;
-    }
-  }
-  
-  // If we've accumulated enough points for the highest rank, return it
-  return ranks[ranks.length - 1];
+  const pointsInCurrentRank = points - rankInfo.min;
+  const pointsNeededForNextRank = rankInfo.next - rankInfo.min;
+  const progress = (pointsInCurrentRank / pointsNeededForNextRank) * 100;
+  const pointsNeeded = rankInfo.next - points;
+
+  return {
+    progress: Math.min(Math.max(progress, 0), 100),
+    pointsNeeded: Math.max(pointsNeeded, 0),
+  };
 }
 
-export function shouldDropRank(points: number, currentRank: RankInfo): boolean {
-  // Never drop rank if pointsToDropRank is null or false
-  if (currentRank.pointsToDropRank === null || currentRank.pointsToDropRank === false) {
-    return false;
-  }
+/**
+ * Get the rank title for a given number of points
+ */
+export function getRankByPoints(points: number): RankTitle {
+  const ranks = Object.entries(RANK_THRESHOLDS) as [RankTitle, typeof RANK_THRESHOLDS[RankTitle]][];
   
-  return points <= currentRank.pointsToDropRank;
+  for (let i = ranks.length - 1; i >= 0; i--) {
+    const [rank, info] = ranks[i];
+    if (points >= info.min) {
+      return rank;
+    }
+  }
+
+  return '新人';
+}
+
+/**
+ * Check if a player should drop rank based on their points
+ */
+export function shouldDropRank(points: number, currentRank: RankTitle): boolean {
+  const rankInfo = RANK_THRESHOLDS[currentRank];
+  return points < rankInfo.min;
+}
+
+/**
+ * Get the next rank title
+ */
+export function getNextRank(currentRank: RankTitle): RankTitle | null {
+  const ranks = Object.keys(RANK_THRESHOLDS) as RankTitle[];
+  const currentIndex = ranks.indexOf(currentRank);
+  
+  if (currentIndex === ranks.length - 1) {
+    return null;
+  }
+
+  return ranks[currentIndex + 1];
+}
+
+/**
+ * Get the previous rank title
+ */
+export function getPreviousRank(currentRank: RankTitle): RankTitle | null {
+  const ranks = Object.keys(RANK_THRESHOLDS) as RankTitle[];
+  const currentIndex = ranks.indexOf(currentRank);
+  
+  if (currentIndex === 0) {
+    return null;
+  }
+
+  return ranks[currentIndex - 1];
+}
+
+/**
+ * Get the English title for a rank
+ */
+export function getRankTitle(rank: RankTitle): string {
+  return RANK_THRESHOLDS[rank].title;
+}
+
+/**
+ * Calculate points needed for next rank
+ */
+export function getPointsToNextRank(currentRank: RankTitle): number | null {
+  const nextRank = getNextRank(currentRank);
+  if (!nextRank) {
+    return null;
+  }
+
+  return RANK_THRESHOLDS[nextRank].min - RANK_THRESHOLDS[currentRank].min;
+}
+
+/**
+ * Get all rank information
+ */
+export function getAllRanks() {
+  return Object.entries(RANK_THRESHOLDS).map(([rank, info]) => ({
+    rank: rank as RankTitle,
+    ...info,
+  }));
 }
 
 export async function updatePlayerRank(tx: Prisma.TransactionClient, playerId: string, pointsChange: number): Promise<void> {
@@ -280,12 +373,12 @@ export async function updatePlayerRank(tx: Prisma.TransactionClient, playerId: s
     where: { id: playerId },
     data: {
       points: newPoints,
-      rank: newRank.kanji
+      rank: newRank
     }
   });
 }
 
-export function calculatePointsForPosition(position: Position | number, isHanchan: boolean, currentRank: string): number {
+export function calculatePointsForPosition(position: Position | number, isHanchan: boolean, currentRank: RankTitle): number {
   const rankInfo = ranks.find(rank => rank.kanji === currentRank);
   if (!rankInfo) {
     console.error(`Invalid rank: ${currentRank}. Using default rank '新人'. Valid ranks are: ${ranks.map(r => r.kanji).join(', ')}`);
@@ -388,7 +481,7 @@ export async function recalculateAllPoints(tx: Prisma.TransactionClient) {
       if (!player) continue;
 
       // Calculate points based on current rank and position
-      const pointsChange = calculatePointsForPosition(i, game.isHanchan, player.rank);
+      const pointsChange = calculatePointsForPosition(i, game.isHanchan, player.rank as RankTitle);
       const newPoints = player.points + pointsChange;
       const newRank = getRankByPoints(newPoints);
 
@@ -397,7 +490,7 @@ export async function recalculateAllPoints(tx: Prisma.TransactionClient) {
         where: { id: playerId },
         data: {
           points: newPoints,
-          rank: newRank.kanji
+          rank: newRank
         }
       });
     }

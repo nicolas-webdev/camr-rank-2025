@@ -74,19 +74,151 @@ The application implements a secure authentication system using NextAuth.js:
 Key data models managed through Prisma:
 
 #### Player Model
-- Player information
-- Ranking data
-- Historical performance
+Core Information:
+- **Identification**
+  - Unique ID (system-generated)
+  - Legajo (required, manually assigned registration number)
+  - Nickname (required)
+  - Real Name (optional)
+  - Nationality (defaults to "Argentina")
+  
+- **Platform Identifiers**
+  - Tenhou Name (optional)
+  - MahjongSoul Name (optional)
 
-#### Game Model
-- Game results
-- Player participants
-- Timestamps and metadata
+- **Ranking Information**
+  - Overall Placement in Rankings
+  - Current Rank Title
+  - Current Points
+  - Points Required for Next Rank
+  - Current Rating (default: 1500)
+  - Historical Maximum Rating
+  
+- **Game Statistics Overview**
+  - Total Games Played
+  - Average Placement
+  - Rentai Rate (1st/2nd placement percentage)
+  - Placement Distribution
+    - First Place Count & Percentage
+    - Second Place Count & Percentage
+    - Third Place Count & Percentage
+    - Fourth Place Count & Percentage
 
 #### Stats Model
-- Player statistics
-- Performance metrics
-- Historical data
+Comprehensive statistics tracking for players:
+
+1. **Overall Statistics**
+   - Total Games Played
+   - Placement Distribution
+     - 1st Place: Count & Percentage
+     - 2nd Place: Count & Percentage
+     - 3rd Place: Count & Percentage
+     - 4th Place: Count & Percentage
+   - Rentai Rate
+   - Average Placement
+   - Current Rating
+   - Peak Rating
+
+2. **Game Type-Specific Statistics**
+   
+   a. Tonpuusen (East-Only)
+   - Games Played
+   - Placement Distribution
+     - 1st Place: Count & Percentage
+     - 2nd Place: Count & Percentage
+     - 3rd Place: Count & Percentage
+     - 4th Place: Count & Percentage
+   - Rentai Rate
+   - Average Placement
+   
+   b. Hanchan (East-South)
+   - Games Played
+   - Placement Distribution
+     - 1st Place: Count & Percentage
+     - 2nd Place: Count & Percentage
+     - 3rd Place: Count & Percentage
+     - 4th Place: Count & Percentage
+   - Rentai Rate
+   - Average Placement
+
+3. **Rating System**
+   - Current Rating (default: 1500)
+   - Historical Maximum Rating
+   - Rating Changes History
+   - Rating Calculation Rules (to be implemented)
+
+### Database Schema Implications
+
+```prisma
+model Player {
+  id              String   @id @default(cuid())
+  legajo          String   @unique
+  nickname        String
+  realName        String?
+  nationality     String   @default("Argentina")
+  tenhouName      String?
+  mahjongSoulName String?
+  
+  // Ranking Information
+  currentRank     String
+  currentPoints   Int
+  currentRating   Int      @default(1500)
+  maxRating       Int      @default(1500)
+  
+  // Relationships
+  stats           Stats    @relation(fields: [statsId], references: [id])
+  statsId         String   @unique
+  games           Game[]
+}
+
+model Stats {
+  id              String   @id @default(cuid())
+  
+  // Overall Stats
+  totalGames      Int      @default(0)
+  firstPlace      Int      @default(0)
+  secondPlace     Int      @default(0)
+  thirdPlace      Int      @default(0)
+  fourthPlace     Int      @default(0)
+  rentaiRate      Float    @default(0)
+  avgPlacement    Float    @default(0)
+  
+  // Tonpuusen Stats
+  tonpuusenGames  Int      @default(0)
+  tonpuusenFirst  Int      @default(0)
+  tonpuusenSecond Int      @default(0)
+  tonpuusenThird  Int      @default(0)
+  tonpuusenFourth Int      @default(0)
+  tonpuusenRentai Float    @default(0)
+  tonpuusenAvg    Float    @default(0)
+  
+  // Hanchan Stats
+  hanchanGames    Int      @default(0)
+  hanchanFirst    Int      @default(0)
+  hanchanSecond   Int      @default(0)
+  hanchanThird    Int      @default(0)
+  hanchanFourth   Int      @default(0)
+  hanchanRentai   Float    @default(0)
+  hanchanAvg      Float    @default(0)
+  
+  // Rating History
+  ratingHistory   RatingChange[]
+  
+  // Relationship
+  player          Player?
+}
+
+model RatingChange {
+  id              String   @id @default(cuid())
+  statsId         String
+  stats           Stats    @relation(fields: [statsId], references: [id])
+  newRating       Int
+  change          Int
+  date            DateTime @default(now())
+  gameId          String?
+  game            Game?    @relation(fields: [gameId], references: [id])
+}
+```
 
 ### API Structure
 RESTful API implementation following Next.js 15 Route Handlers pattern:

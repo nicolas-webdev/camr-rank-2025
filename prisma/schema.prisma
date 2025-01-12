@@ -61,49 +61,121 @@ model VerificationToken {
 }
 
 model Player {
-  id        String   @id @default(cuid())
-  userId    String?  @unique
-  nickname  String   @unique
-  rating    Int      @default(1500)
-  points    Int      @default(0)
-  rank      String   @default("新人")
-  user      User?    @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  eastGames  Game[]  @relation("EastPlayer")
-  southGames Game[]  @relation("SouthPlayer")
-  westGames  Game[]  @relation("WestPlayer")
-  northGames Game[]  @relation("NorthPlayer")
+  id              String    @id @default(cuid())
+  userId          String?   @unique
+  nickname        String    @unique
+  legajo          Int       @unique
+  realName        String?
+  nationality     String    @default("Argentina")
+  tenhouName      String?
+  mahjongSoulName String?
+  
+  // Ranking Information
+  rating          Float     @default(1500)
+  maxRating       Float     @default(1500)
+  points          Int       @default(0)
+  rank            String    @default("新人")
+  rankProgress    Float     @default(0) // Progress to next rank (0-100)
+  
+  // Relationships
+  user            User?     @relation(fields: [userId], references: [id])
+  stats           Stats?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Game relationships
+  eastGames       Game[]    @relation("EastPlayer")
+  southGames      Game[]    @relation("SouthPlayer")
+  westGames       Game[]    @relation("WestPlayer")
+  northGames      Game[]    @relation("NorthPlayer")
+}
+
+model Stats {
+  id              String   @id @default(cuid())
+  playerId        String   @unique
+  player          Player   @relation(fields: [playerId], references: [id])
+  
+  // Overall Stats
+  totalGames      Int      @default(0)
+  firstPlace      Int      @default(0)
+  secondPlace     Int      @default(0)
+  thirdPlace      Int      @default(0)
+  fourthPlace     Int      @default(0)
+  rentaiRate      Float    @default(0)
+  avgPlacement    Float    @default(0)
+  
+  // Tonpuusen Stats
+  tonpuusenGames  Int      @default(0)
+  tonpuusenFirst  Int      @default(0)
+  tonpuusenSecond Int      @default(0)
+  tonpuusenThird  Int      @default(0)
+  tonpuusenFourth Int      @default(0)
+  tonpuusenRentai Float    @default(0)
+  tonpuusenAvg    Float    @default(0)
+  
+  // Hanchan Stats
+  hanchanGames    Int      @default(0)
+  hanchanFirst    Int      @default(0)
+  hanchanSecond   Int      @default(0)
+  hanchanThird    Int      @default(0)
+  hanchanFourth   Int      @default(0)
+  hanchanRentai   Float    @default(0)
+  hanchanAvg      Float    @default(0)
+  
+  // Rating History
+  ratingHistory   RatingChange[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model RatingChange {
+  id              String   @id @default(cuid())
+  statsId         String
+  stats           Stats    @relation(fields: [statsId], references: [id])
+  oldRating       Int
+  newRating       Int
+  change          Int
+  gameId          String?
+  game            Game?    @relation(fields: [gameId], references: [id])
+  date            DateTime @default(now())
 }
 
 model Game {
-  id            String   @id @default(cuid())
-  date          DateTime @default(now())
-  isHanchan     Boolean  @default(true)
-  eastPlayerId  String
-  eastScore     Int
-  southPlayerId String
-  southScore    Int
-  westPlayerId  String
-  westScore     Int
-  northPlayerId String
-  northScore    Int
-  eastPlayer    Player   @relation("EastPlayer", fields: [eastPlayerId], references: [id])
-  southPlayer   Player   @relation("SouthPlayer", fields: [southPlayerId], references: [id])
-  westPlayer    Player   @relation("WestPlayer", fields: [westPlayerId], references: [id])
-  northPlayer   Player   @relation("NorthPlayer", fields: [northPlayerId], references: [id])
+  id              String   @id @default(cuid())
+  date            DateTime @default(now())
+  isHanchan       Boolean  @default(true)
+  
+  // Player positions and scores
+  eastPlayerId    String
+  eastScore       Int
+  southPlayerId   String
+  southScore      Int
+  westPlayerId    String
+  westScore       Int
+  northPlayerId   String
+  northScore      Int
+  
+  // Player relationships
+  eastPlayer      Player   @relation("EastPlayer", fields: [eastPlayerId], references: [id])
+  southPlayer     Player   @relation("SouthPlayer", fields: [southPlayerId], references: [id])
+  westPlayer      Player   @relation("WestPlayer", fields: [westPlayerId], references: [id])
+  northPlayer     Player   @relation("NorthPlayer", fields: [northPlayerId], references: [id])
+  
+  // Rating changes
+  ratingChanges   RatingChange[]
   
   // Audit fields
-  createdAt     DateTime @default(now())
-  createdById   String
-  createdBy     User    @relation("GameCreator", fields: [createdById], references: [id])
-  updatedAt     DateTime @updatedAt
-  updatedById   String?
-  updatedBy     User?   @relation("GameUpdater", fields: [updatedById], references: [id])
-  deletedAt     DateTime?
-  deletedById   String?
-  deletedBy     User?   @relation("GameDeleter", fields: [deletedById], references: [id])
-  isDeleted     Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  createdById     String
+  createdBy       User     @relation("GameCreator", fields: [createdById], references: [id])
+  updatedAt       DateTime @updatedAt
+  updatedById     String?
+  updatedBy       User?    @relation("GameUpdater", fields: [updatedById], references: [id])
+  deletedAt       DateTime?
+  deletedById     String?
+  deletedBy       User?    @relation("GameDeleter", fields: [deletedById], references: [id])
+  isDeleted       Boolean  @default(false)
   
   // Revision history
   previousVersionId String?   @unique

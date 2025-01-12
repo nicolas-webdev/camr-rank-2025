@@ -24,7 +24,7 @@ export default withAuth(
     if (isAdminRoute) {
       const isAdmin = req.nextauth.token?.isAdmin;
       if (!isAdmin) {
-        return NextResponse.redirect(new URL('/', req.url));
+        return NextResponse.redirect(new URL('/auth/error?error=AccessDenied', req.url));
       }
     }
 
@@ -55,7 +55,8 @@ export default withAuth(
       }
     },
     pages: {
-      signIn: '/api/auth/signin'
+      signIn: '/auth/signin',
+      error: '/auth/error',
     }
   }
 );

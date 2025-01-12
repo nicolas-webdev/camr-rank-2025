@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { db } from '@/lib';
 import { z } from 'zod';
 import type { Session } from 'next-auth';
+import { calculateRankProgress, type RankTitle } from '@/lib/ranking';
 
 // Extend Session type to include id
 interface ExtendedSession extends Session {
@@ -17,40 +18,42 @@ interface ExtendedSession extends Session {
 
 const playerSchema = z.object({
   nickname: z.string().min(1),
-  rank: z.string(),
+  rank: z.enum(['新人', '9級', '8級', '7級', '6級', '5級', '4級', '3級', '2級', '1級', '初段', '二段', '三段', '四段', '五段', '六段', '七段', '八段', '九段', '十段']),
   points: z.number(),
 });
 
 export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  request: Request,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
+    const playerId = params.id;
+
     const player = await db.player.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        nickname: true,
-        points: true,
-        rank: true,
-      }
+      where: { id: playerId },
+      include: {
+        stats: true,
+      },
     });
 
     if (!player) {
-      return NextResponse.json(
-        { error: 'Player not found' },
-        { status: 404 }
-      );
+      return new NextResponse('Player not found', { status: 404 });
     }
 
-    return NextResponse.json(player);
+    // Calculate rank progress and points needed for next rank
+    const { progress, pointsNeeded } = calculateRankProgress(player.points, player.rank as RankTitle);
+
+    // Add calculated fields to player data
+    const extendedPlayer = {
+      ...player,
+      rankProgress: progress,
+      pointsToNextRank: pointsNeeded,
+    };
+
+    return NextResponse.json(extendedPlayer);
   } catch (error) {
     console.error('Error fetching player:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
 

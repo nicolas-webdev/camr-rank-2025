@@ -1,20 +1,45 @@
-import { Suspense } from 'react';
-import PlayerProfileClient from '@/app/players/[id]/PlayerProfileClient';
+import { PlayerProfile } from '@/components/PlayerProfile';
+import { db } from '@/lib/prisma';
+import { notFound } from 'next/navigation';
 
-interface PageProps {
-  params: Promise<{ id: string }>;
+interface PlayerPageProps {
+  params: {
+    id: string;
+  };
 }
 
-export default async function PlayerProfilePage({ params }: PageProps) {
-  const { id } = await params;
+export async function generateMetadata({ params }: PlayerPageProps) {
+  const player = await db.player.findUnique({
+    where: { id: params.id },
+    select: { nickname: true },
+  });
+
+  if (!player) {
+    return {
+      title: 'Player Not Found',
+    };
+  }
+
+  return {
+    title: `${player.nickname}'s Profile - CAMR Rankings`,
+    description: `View ${player.nickname}'s mahjong statistics and ranking information.`,
+  };
+}
+
+export default async function PlayerPage({ params }: PlayerPageProps) {
+  // Verify player exists
+  const player = await db.player.findUnique({
+    where: { id: params.id },
+    select: { id: true },
+  });
+
+  if (!player) {
+    notFound();
+  }
 
   return (
-    <Suspense fallback={
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-      </div>
-    }>
-      <PlayerProfileClient playerId={id} />
-    </Suspense>
+    <main className="container mx-auto px-4 py-8">
+      <PlayerProfile playerId={params.id} />
+    </main>
   );
 } 
