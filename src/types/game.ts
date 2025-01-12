@@ -1,7 +1,25 @@
+export type User = {
+  name: string | null;
+  email: string | null;
+};
+
 export type Player = {
   id: string;
   nickname: string;
+  points?: number;
+  rank?: string;
+  rating?: number;
 };
+
+export interface RatingChange {
+  statsId: string;
+  oldRating: number;
+  newRating: number;
+  change: number;
+  oldRank: string;
+  newRank: string;
+  pointsToNextRank: number;
+}
 
 export interface Game {
   id: string;
@@ -20,6 +38,13 @@ export interface Game {
   northPlayer: Player;
   northScore: number;
   isDeleted: boolean;
+  createdAt: string;
+  createdBy: User;
+  updatedAt: string;
+  updatedBy: User | null;
+  deletedAt: string | null;
+  deletedBy: User | null;
+  ratingChanges?: RatingChange[];
 }
 
 export interface GameFormData {

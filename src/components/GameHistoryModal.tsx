@@ -1,37 +1,7 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-
-type Player = {
-  id: string;
-  nickname: string;
-};
-
-type User = {
-  name: string | null;
-  email: string | null;
-};
-
-type Game = {
-  id: string;
-  date: string;
-  isHanchan: boolean;
-  eastPlayer: Player;
-  eastScore: number;
-  southPlayer: Player;
-  southScore: number;
-  westPlayer: Player;
-  westScore: number;
-  northPlayer: Player;
-  northScore: number;
-  createdAt: string;
-  createdBy: User;
-  updatedAt: string;
-  updatedBy: User | null;
-  deletedAt: string | null;
-  deletedBy: User | null;
-  isDeleted: boolean;
-};
+import type { Game } from '@/types/game';
 
 type GameHistoryModalProps = {
   gameId: string;
@@ -124,12 +94,62 @@ export default function GameHistoryModal({ gameId, onClose }: GameHistoryModalPr
 
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <h3 className="font-semibold mb-2">Players & Scores</h3>
-                  <div className="space-y-1">
-                    <div>🀀 {version.eastPlayer.nickname}: {version.eastScore}</div>
-                    <div>🀁 {version.southPlayer.nickname}: {version.southScore}</div>
-                    <div>🀂 {version.westPlayer.nickname}: {version.westScore}</div>
-                    <div>🀃 {version.northPlayer.nickname}: {version.northScore}</div>
+                  <h3 className="font-semibold mb-2">Players & Results</h3>
+                  <div className="space-y-2">
+                    {[
+                      { player: version.eastPlayer, score: version.eastScore, wind: '🀀', position: 'East' },
+                      { player: version.southPlayer, score: version.southScore, wind: '🀁', position: 'South' },
+                      { player: version.westPlayer, score: version.westScore, wind: '🀂', position: 'West' },
+                      { player: version.northPlayer, score: version.northScore, wind: '🀃', position: 'North' }
+                    ]
+                      .sort((a, b) => b.score - a.score)
+                      .map((entry, index) => (
+                        <div key={entry.player.id} className="flex items-center justify-between p-2 rounded bg-gray-50">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-6 h-6 flex items-center justify-center rounded-full text-sm font-medium
+                            ${index === 0 ? 'bg-yellow-100 text-yellow-800' :
+                                index === 1 ? 'bg-gray-200 text-gray-800' :
+                                  index === 2 ? 'bg-orange-100 text-orange-800' :
+                                    'bg-gray-100 text-gray-700'}`}>
+                              {index + 1}
+                            </div>
+                            <span>{entry.wind}</span>
+                            <span className="font-medium">{entry.player.nickname}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-medium">{entry.score}</div>
+                            {version.ratingChanges?.find(rc => rc.statsId === entry.player.id) && (
+                              <div className="text-sm space-y-1" key={`rating-changes-${entry.player.id}`}>
+                                {(() => {
+                                  const ratingChange = version.ratingChanges?.find(rc => rc.statsId === entry.player.id);
+                                  if (!ratingChange) return null;
+                                  return (
+                                    <>
+                                      <div className={ratingChange.change > 0
+                                        ? 'text-green-600'
+                                        : ratingChange.change < 0
+                                          ? 'text-red-600'
+                                          : 'text-gray-600'}>
+                                        {ratingChange.change > 0 ? '+' : ''}
+                                        {ratingChange.change} rank points
+                                      </div>
+                                      <div className="text-gray-500">
+                                        {ratingChange.oldRating} → {ratingChange.newRating} rating
+                                      </div>
+                                      <div className="text-gray-600">
+                                        {ratingChange.oldRank} → {ratingChange.newRank}
+                                      </div>
+                                      <div className="text-sm text-gray-500">
+                                        {ratingChange.pointsToNextRank} points to next rank
+                                      </div>
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                   </div>
                 </div>
 
