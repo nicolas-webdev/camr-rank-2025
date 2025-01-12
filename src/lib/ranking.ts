@@ -310,11 +310,13 @@ export function calculateGameRankInfo(game: { isHanchan: boolean; eastPlayerId: 
     { playerId: game.northPlayerId, position: 'north' as Position, score: game.northScore, seatIndex: 3 }
   ];
 
-  // Sort by score first, then by seat position (closer to east wins ties)
+  // Sort by score first, then by seat position ONLY for exact ties
   positions.sort((a, b) => {
-    if (a.score !== b.score) {
-      return b.score - a.score;
+    const scoreDiff = b.score - a.score;
+    if (scoreDiff !== 0) {
+      return scoreDiff;
     }
+    // Only use seat position as tiebreaker for exact ties
     return a.seatIndex - b.seatIndex;
   });
 
