@@ -5,6 +5,7 @@ import { db } from '@/lib';
 import { z } from 'zod';
 import type { Session } from 'next-auth';
 import { calculateRankProgress, type RankTitle } from '@/lib/ranking';
+import type { Prisma } from '@prisma/client';
 
 // Extend Session type to include id
 interface ExtendedSession extends Session {
@@ -15,6 +16,88 @@ interface ExtendedSession extends Session {
     image?: string | null;
   }
 }
+
+const playerInclude = {
+  stats: true,
+  eastGames: {
+    where: { isDeleted: false },
+    include: {
+      eastPlayer: true,
+      southPlayer: true,
+      westPlayer: true,
+      northPlayer: true,
+      ratingChanges: true,
+      createdBy: {
+        select: { name: true }
+      },
+      updatedBy: {
+        select: { name: true }
+      },
+    },
+    orderBy: {
+      date: 'desc'
+    }
+  },
+  southGames: {
+    where: { isDeleted: false },
+    include: {
+      eastPlayer: true,
+      southPlayer: true,
+      westPlayer: true,
+      northPlayer: true,
+      ratingChanges: true,
+      createdBy: {
+        select: { name: true }
+      },
+      updatedBy: {
+        select: { name: true }
+      },
+    },
+    orderBy: {
+      date: 'desc'
+    }
+  },
+  westGames: {
+    where: { isDeleted: false },
+    include: {
+      eastPlayer: true,
+      southPlayer: true,
+      westPlayer: true,
+      northPlayer: true,
+      ratingChanges: true,
+      createdBy: {
+        select: { name: true }
+      },
+      updatedBy: {
+        select: { name: true }
+      },
+    },
+    orderBy: {
+      date: 'desc'
+    }
+  },
+  northGames: {
+    where: { isDeleted: false },
+    include: {
+      eastPlayer: true,
+      southPlayer: true,
+      westPlayer: true,
+      northPlayer: true,
+      ratingChanges: true,
+      createdBy: {
+        select: { name: true }
+      },
+      updatedBy: {
+        select: { name: true }
+      },
+    },
+    orderBy: {
+      date: 'desc'
+    }
+  }
+} satisfies Prisma.PlayerInclude;
+
+type PlayerWithGames = Prisma.PlayerGetPayload<{ include: typeof playerInclude }>;
 
 const playerSchema = z.object({
   nickname: z.string().min(1),
@@ -27,14 +110,12 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const playerId = params.id;
+    const { id: playerId } = await params;
 
     const player = await db.player.findUnique({
       where: { id: playerId },
-      include: {
-        stats: true,
-      },
-    });
+      include: playerInclude
+    }) as PlayerWithGames | null;
 
     if (!player) {
       return new NextResponse('Player not found', { status: 404 });
@@ -43,17 +124,29 @@ export async function GET(
     // Calculate rank progress and points needed for next rank
     const { progress, pointsNeeded } = calculateRankProgress(player.points, player.rank as RankTitle);
 
+    // Combine all games and sort by date
+    const allGames = [
+      ...player.eastGames,
+      ...player.southGames,
+      ...player.westGames,
+      ...player.northGames
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
     // Add calculated fields to player data
     const extendedPlayer = {
       ...player,
       rankProgress: progress,
       pointsToNextRank: pointsNeeded,
+      games: allGames
     };
 
     return NextResponse.json(extendedPlayer);
   } catch (error) {
     console.error('Error fetching player:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch player' },
+      { status: 500 }
+    );
   }
 }
 

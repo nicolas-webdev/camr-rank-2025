@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { getRankTitle, calculateRankProgress } from '@/lib/ranking';
+import { getRankTitle, calculateRankProgress, getNextRank } from '@/lib/ranking';
 import type { RankTitle } from '@/lib/ranking';
 
 interface PreviewPlayerType {
@@ -52,12 +52,38 @@ export default function NewPlayerPage() {
 
   // Handle keyboard events for modal
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       if (showConfirmation) {
         if (e.key === 'Escape') {
           setShowConfirmation(false);
         } else if (e.key === 'Enter' && !isLoading) {
-          handleConfirm();
+          setShowConfirmation(false);
+          setIsLoading(true);
+          setError(null);
+
+          try {
+            const response = await fetch('/api/players', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                ...formData,
+                legajo: parseInt(formData.legajo, 10),
+              }),
+            });
+
+            if (!response.ok) {
+              const data = await response.text();
+              throw new Error(data);
+            }
+
+            router.push('/players');
+            router.refresh();
+          } catch (err) {
+            setError(err instanceof Error ? err.message : 'An error occurred');
+            setIsLoading(false);
+          }
         } else if (e.key === 'Tab') {
           if (modalRef.current) {
             const focusableElements = modalRef.current.querySelectorAll(
@@ -80,7 +106,7 @@ export default function NewPlayerPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showConfirmation, isLoading]);
+  }, [showConfirmation, isLoading, formData, router]);
 
   // Focus management for modal
   useEffect(() => {
@@ -104,6 +130,11 @@ export default function NewPlayerPage() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowConfirmation(true);
+  };
 
   const handleConfirm = async () => {
     setShowConfirmation(false);
@@ -133,11 +164,6 @@ export default function NewPlayerPage() {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setIsLoading(false);
     }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setShowConfirmation(true);
   };
 
   // Create preview data
@@ -331,28 +357,77 @@ export default function NewPlayerPage() {
             {/* Rank Progress */}
             <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Rank Progress</h2>
-              <div className="relative pt-1">
-                <div className="flex mb-2 items-center justify-between">
-                  <div>
-                    <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200 dark:text-blue-200 dark:bg-blue-600/20">
-                      Progress
+              <div className="space-y-4">
+                {/* Current and Next Rank */}
+                <div className="flex justify-between items-center">
+                  <div className="text-gray-900 dark:text-white">
+                    <span className="font-medium">Current Rank:</span>{' '}
+                    <span className="inline-flex items-center gap-1">
+                      <span>{previewData.rank}</span>
+                      <span className="text-gray-600 dark:text-gray-400">({getRankTitle(previewData.rank)})</span>
+                      <div className="group relative inline-block ml-1">
+                        <button
+                          type="button"
+                          className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400"
+                          aria-label="Rank information"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.06-1.06 2.5 2.5 0 113.53 3.53.75.75 0 11-1.06-1.06 1 1 0 10-1.41-1.41zM9 13a1 1 0 112 0 1 1 0 01-2 0z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                        <div className="invisible group-hover:visible absolute left-full ml-2 w-64 p-2 bg-white dark:bg-gray-700 rounded-lg shadow-lg text-sm text-gray-600 dark:text-gray-300 z-10">
+                          <p>Players start at 新人 (Beginner) rank with 0 points. Earn points by playing games and achieving good results to progress through ranks.</p>
+                        </div>
+                      </div>
                     </span>
                   </div>
-                  <div className="text-right">
-                    <span className="text-xs font-semibold inline-block text-blue-600 dark:text-blue-200">
-                      {previewData.rankProgress}%
+                  <div className="text-gray-900 dark:text-white">
+                    <span className="font-medium">Next Rank:</span>{' '}
+                    <span className="inline-flex items-center gap-1">
+                      {(() => {
+                        const nextRank = getNextRank(previewData.rank);
+                        return nextRank ? (
+                          <>
+                            <span>{nextRank}</span>
+                            <span className="text-gray-600 dark:text-gray-400">({getRankTitle(nextRank)})</span>
+                          </>
+                        ) : (
+                          <span className="text-gray-600 dark:text-gray-400">Maximum Rank Achieved</span>
+                        );
+                      })()}
                     </span>
                   </div>
                 </div>
-                <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200 dark:bg-blue-600/20">
-                  <div
-                    style={{ width: `${previewData.rankProgress}%` }}
-                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 dark:bg-blue-400 transition-all duration-500"
-                  />
+
+                {/* Progress Bar */}
+                <div className="relative pt-1">
+                  <div className="flex mb-2 items-center justify-between">
+                    <div>
+                      <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200 dark:text-blue-200 dark:bg-blue-600/20">
+                        Progress to Next Rank
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-semibold inline-block text-blue-600 dark:text-blue-200">
+                        {previewData.rankProgress}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200 dark:bg-blue-600/20">
+                    <div
+                      style={{ width: `${previewData.rankProgress}%` }}
+                      className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 dark:bg-blue-400 transition-all duration-500"
+                    />
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Current: {previewData.points} points
+                    </p>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Need: {previewData.pointsToNextRank} more points
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {previewData.pointsToNextRank} points needed for next rank
-                </p>
               </div>
             </div>
           </div>
