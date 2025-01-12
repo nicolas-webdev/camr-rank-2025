@@ -4,39 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import GameActions from '@/components/GameActions';
-
-type Player = {
-  id: string;
-  nickname: string;
-  points: number;
-  rank: string;
-  rating: number;
-};
-
-type Game = {
-  id: string;
-  date: string;
-  isHanchan: boolean;
-  eastPlayerId: string;
-  eastPlayer: Player;
-  eastScore: number;
-  southPlayerId: string;
-  southPlayer: Player;
-  southScore: number;
-  westPlayerId: string;
-  westPlayer: Player;
-  westScore: number;
-  northPlayerId: string;
-  northPlayer: Player;
-  northScore: number;
-  isDeleted: boolean;
-  createdAt: string;
-  createdBy?: { name: string | null };
-  updatedAt: string;
-  updatedBy?: { name: string | null };
-  deletedAt?: string;
-  deletedBy?: { name: string | null };
-};
+import GameHistoryModal from '@/components/GameHistoryModal';
+import type { Game, Player } from '@/types/game';
 
 export default function Home() {
   const { data: session } = useSession();
@@ -45,6 +14,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -189,61 +159,74 @@ export default function Home() {
                   <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Date</th>
                   <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Type</th>
                   <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Players</th>
-                  {isAdmin && (
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Actions</th>
-                  )}
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {recentGames.map((game) => (
-                  <tr key={game.id} className={game.isDeleted ? 'bg-red-50' : ''}>
-                    <td className="px-4 py-2 text-sm text-gray-900">
-                      {new Date(game.date).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-2 text-sm text-gray-900">
-                      {game.isDeleted ? (
-                        <span className="text-red-600">Deleted</span>
-                      ) : (
-                        <span>{game.isHanchan ? 'Hanchan' : 'Tonpuusen'}</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-sm">
-                      <div className="space-y-1">
-                        <div>
-                          🀀 <Link href={`/players/${game.eastPlayer.id}`} className="text-indigo-600 hover:text-indigo-900">
-                            {game.eastPlayer.nickname}
-                          </Link>: {game.eastScore}
-                        </div>
-                        <div>
-                          🀁 <Link href={`/players/${game.southPlayer.id}`} className="text-indigo-600 hover:text-indigo-900">
-                            {game.southPlayer.nickname}
-                          </Link>: {game.southScore}
-                        </div>
-                        <div>
-                          🀂 <Link href={`/players/${game.westPlayer.id}`} className="text-indigo-600 hover:text-indigo-900">
-                            {game.westPlayer.nickname}
-                          </Link>: {game.westScore}
-                        </div>
-                        <div>
-                          🀃 <Link href={`/players/${game.northPlayer.id}`} className="text-indigo-600 hover:text-indigo-900">
-                            {game.northPlayer.nickname}
-                          </Link>: {game.northScore}
-                        </div>
-                      </div>
-                    </td>
-                    {isAdmin && (
-                      <td className="px-4 py-2 text-sm">
-                        <GameActions
-                          game={{
-                            ...game,
-                            date: new Date(game.date)
-                          }}
-                          onGameUpdated={handleGameUpdated}
-                        />
+                {recentGames.map((game) => {
+                  return (
+                    <tr key={game.id} className={game.isDeleted ? 'bg-red-50' : ''}>
+                      <td className="px-4 py-2 text-sm text-gray-900">
+                        {new Date(game.date).toLocaleDateString()}
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td className="px-4 py-2 text-sm text-gray-900">
+                        {game.isDeleted ? (
+                          <span className="text-red-600">Deleted</span>
+                        ) : (
+                          <span>{game.isHanchan ? 'Hanchan' : 'Tonpuusen'}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        <div className="space-y-1">
+                          {[
+                            { player: game.eastPlayer, score: game.eastScore, wind: '🀀' },
+                            { player: game.southPlayer, score: game.southScore, wind: '🀁' },
+                            { player: game.westPlayer, score: game.westScore, wind: '🀂' },
+                            { player: game.northPlayer, score: game.northScore, wind: '🀃' }
+                          ]
+                            .sort((a, b) => b.score - a.score)
+                            .map((entry, index) => (
+                              <div key={entry.player.id} className="flex items-center gap-2">
+                                <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium
+                                  ${index === 0 ? 'bg-yellow-100 text-yellow-800' :
+                                    index === 1 ? 'bg-gray-200 text-gray-800' :
+                                      index === 2 ? 'bg-orange-100 text-orange-800' :
+                                        'bg-gray-100 text-gray-700'}`}>
+                                  {index + 1}
+                                </div>
+                                <span>{entry.wind}</span>
+                                <Link href={`/players/${entry.player.id}`} className="text-indigo-600 hover:text-indigo-900">
+                                  {entry.player.nickname}
+                                </Link>
+                                <span>{entry.score}</span>
+                              </div>
+                            ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        <div className="flex space-x-2">
+                          {isAdmin ? (
+                            <GameActions
+                              game={{
+                                ...game,
+                                date: new Date(game.date).toISOString()
+                              }}
+                              onGameUpdated={handleGameUpdated}
+                            />
+                          ) : (
+                            <button
+                              onClick={() => setSelectedGameId(game.id)}
+                              className="text-indigo-600 hover:text-indigo-900"
+                              title="View history"
+                            >
+                              📜
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -272,7 +255,7 @@ export default function Home() {
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {topPlayers
-                  .sort((a, b) => b.points - a.points)
+                  .sort((a, b) => (b.points ?? 0) - (a.points ?? 0))
                   .slice(0, 10)
                   .map((player) => (
                     <tr key={player.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -288,10 +271,10 @@ export default function Home() {
                         </Link>
                       </td>
                       <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">
-                        {player.rating.toFixed(1)}
+                        {(player.rating ?? 0).toFixed(1)}
                       </td>
                       <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">
-                        {player.points.toFixed(1)}
+                        {(player.points ?? 0).toFixed(1)}
                       </td>
                     </tr>
                   ))}
@@ -300,6 +283,13 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {selectedGameId && (
+        <GameHistoryModal
+          gameId={selectedGameId}
+          onClose={() => setSelectedGameId(null)}
+        />
+      )}
     </div>
   );
 } 

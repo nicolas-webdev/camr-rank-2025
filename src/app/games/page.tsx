@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import GameActions from '@/components/GameActions';
+import GameHistoryModal from '@/components/GameHistoryModal';
 
 type Player = {
   id: string;
@@ -41,6 +42,7 @@ export default function GamesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -136,39 +138,71 @@ export default function GamesPage() {
               <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Type</th>
               <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Players</th>
               <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Score</th>
-              {isAdmin && (
-                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Actions</th>
-              )}
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {games.map((game) => (
-              <tr key={game.id} className={game.isDeleted ? 'bg-red-50' : ''}>
-                <td className="px-4 py-2 text-sm">
-                  {new Date(game.date).toLocaleString()}
-                </td>
-                <td className="px-4 py-2 text-sm">
-                  {game.isHanchan ? 'Hanchan' : 'Tonpuusen'}
-                </td>
-                <td className="px-4 py-2 text-sm">
-                  <div>🀀 {game.eastPlayer.nickname}</div>
-                  <div>🀁 {game.southPlayer.nickname}</div>
-                  <div>🀂 {game.westPlayer.nickname}</div>
-                  <div>🀃 {game.northPlayer.nickname}</div>
-                </td>
-                <td className="px-4 py-2 text-sm">
-                  <div>{game.eastScore}</div>
-                  <div>{game.southScore}</div>
-                  <div>{game.westScore}</div>
-                  <div>{game.northScore}</div>
-                </td>
-                {isAdmin && (
+            {games.map((game) => {
+              const scores = [
+                { id: game.eastPlayerId, score: game.eastScore },
+                { id: game.southPlayerId, score: game.southScore },
+                { id: game.westPlayerId, score: game.westScore },
+                { id: game.northPlayerId, score: game.northScore }
+              ].sort((a, b) => b.score - a.score);
+
+              return (
+                <tr key={game.id} className={game.isDeleted ? 'bg-red-50' : ''}>
                   <td className="px-4 py-2 text-sm">
-                    <GameActions game={game} onGameUpdated={handleGameUpdated} />
+                    {new Date(game.date).toLocaleString()}
                   </td>
-                )}
-              </tr>
-            ))}
+                  <td className="px-4 py-2 text-sm">
+                    {game.isHanchan ? 'Hanchan' : 'Tonpuusen'}
+                  </td>
+                  <td className="px-4 py-2 text-sm">
+                    <div className="space-y-1">
+                      {[
+                        { player: game.eastPlayer, score: game.eastScore, wind: '🀀' },
+                        { player: game.southPlayer, score: game.southScore, wind: '🀁' },
+                        { player: game.westPlayer, score: game.westScore, wind: '🀂' },
+                        { player: game.northPlayer, score: game.northScore, wind: '🀃' }
+                      ]
+                        .sort((a, b) => b.score - a.score)
+                        .map((entry, index) => (
+                          <div key={entry.player.id} className="flex items-center gap-2">
+                            <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium
+                              ${index === 0 ? 'bg-yellow-100 text-yellow-800' :
+                                index === 1 ? 'bg-gray-200 text-gray-800' :
+                                  index === 2 ? 'bg-orange-100 text-orange-800' :
+                                    'bg-gray-100 text-gray-700'}`}>
+                              {index + 1}
+                            </div>
+                            <span>{entry.wind}</span>
+                            <Link href={`/players/${entry.player.id}`} className="text-indigo-600 hover:text-indigo-900">
+                              {entry.player.nickname}
+                            </Link>
+                            <span>{entry.score}</span>
+                          </div>
+                        ))}
+                    </div>
+                  </td>
+                  <td className="px-4 py-2 text-sm">
+                    <div className="space-y-1">
+                      {scores.map(score => (
+                        <div key={score.id}>{score.score}</div>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-4 py-2 text-sm">
+                    <div className="flex space-x-2">
+                      <GameActions
+                        game={game}
+                        onGameUpdated={handleGameUpdated}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

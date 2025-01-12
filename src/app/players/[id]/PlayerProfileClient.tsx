@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
-import GameActions from '@/components/GameActions';
+import GameHistoryModal from '@/components/GameHistoryModal';
 
 type Player = {
   id: string;
@@ -12,104 +11,93 @@ type Player = {
   rank: string;
 };
 
-type GameWithDate = {
+interface RatingChange {
+  statsId: string;
+  oldRating: number;
+  newRating: number;
+  change: number;
+  oldRank: string;
+  newRank: string;
+  pointsToNextRank: number;
+  rankPoints: number;  // Points earned/lost for rank progression
+}
+
+interface Game {
   id: string;
   date: Date;
   isHanchan: boolean;
   eastPlayerId: string;
-  eastPlayer: Player;
   eastScore: number;
   southPlayerId: string;
-  southPlayer: Player;
   southScore: number;
   westPlayerId: string;
-  westPlayer: Player;
   westScore: number;
   northPlayerId: string;
-  northPlayer: Player;
   northScore: number;
+  eastPlayer: { id: string; nickname: string };
+  southPlayer: { id: string; nickname: string };
+  westPlayer: { id: string; nickname: string };
+  northPlayer: { id: string; nickname: string };
   isDeleted: boolean;
-};
+  ratingChanges?: RatingChange[];
+}
 
 interface PlayerProfileClientProps {
   playerId: string;
 }
 
+function getPlayerPlacement(game: Game, playerId: string): { placement: number, score: number } {
+  const scores = [
+    { id: game.eastPlayerId, score: game.eastScore },
+    { id: game.southPlayerId, score: game.southScore },
+    { id: game.westPlayerId, score: game.westScore },
+    { id: game.northPlayerId, score: game.northScore }
+  ].sort((a, b) => b.score - a.score);
+
+  return {
+    placement: scores.findIndex(s => s.id === playerId) + 1,
+    score: scores.find(s => s.id === playerId)?.score || 0
+  };
+}
+
 export default function PlayerProfileClient({ playerId }: PlayerProfileClientProps) {
-  const { data: session } = useSession();
-  const [isAdmin, setIsAdmin] = useState(false);
   const [player, setPlayer] = useState<Player | null>(null);
-  const [games, setGames] = useState<GameWithDate[]>([]);
+  const [games, setGames] = useState<Game[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+
+  const fetchData = async () => {
+    try {
+      const [playerResponse, gamesResponse] = await Promise.all([
+        fetch(`/api/players/${playerId}`),
+        fetch(`/api/players/${playerId}/games`),
+      ]);
+
+      if (!playerResponse.ok || !gamesResponse.ok) {
+        throw new Error('Failed to fetch data');
+      }
+
+      const [playerData, gamesData] = await Promise.all([
+        playerResponse.json(),
+        gamesResponse.json(),
+      ]);
+
+      setPlayer(playerData);
+      setGames(gamesData.map((game: Game) => ({
+        ...game,
+        date: new Date(game.date)
+      })));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (session?.user?.id) {
-        const response = await fetch(`/api/users/${session.user.id}`);
-        if (response.ok) {
-          const user = await response.json();
-          setIsAdmin(user.isAdmin);
-        }
-      }
-    };
-
-    checkAdminStatus();
-  }, [session]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [playerResponse, gamesResponse] = await Promise.all([
-          fetch(`/api/players/${playerId}`),
-          fetch(`/api/players/${playerId}/games`),
-        ]);
-
-        if (!playerResponse.ok || !gamesResponse.ok) {
-          throw new Error('Failed to fetch data');
-        }
-
-        const [playerData, gamesData] = await Promise.all([
-          playerResponse.json(),
-          gamesResponse.json(),
-        ]);
-
-        setPlayer(playerData);
-        setGames(gamesData.map((game: GameWithDate) => ({
-          ...game,
-          date: new Date(game.date)
-        })));
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchData();
   }, [playerId]);
-
-  const handleGameUpdated = () => {
-    // Refetch games after update
-    setIsLoading(true);
-    fetch(`/api/players/${playerId}/games`)
-      .then(response => {
-        if (!response.ok) throw new Error('Failed to fetch games');
-        return response.json();
-      })
-      .then(gamesData => {
-        setGames(gamesData.map((game: GameWithDate) => ({
-          ...game,
-          date: new Date(game.date)
-        })));
-      })
-      .catch(err => {
-        setError(err instanceof Error ? err.message : 'Failed to fetch games');
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  };
 
   if (isLoading) {
     return (
@@ -152,50 +140,93 @@ export default function PlayerProfileClient({ playerId }: PlayerProfileClientPro
         </div>
       </div>
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <table className="min-w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Date</th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Type</th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Players</th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Score</th>
-              {isAdmin && (
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold mb-4">Game History</h2>
+        <div className="bg-white shadow rounded-lg overflow-hidden">
+          <table className="min-w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Date</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Type</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Placement</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Score</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Points</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Players</th>
                 <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Actions</th>
-              )}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {games.map((game) => (
-              <tr key={game.id} className={game.isDeleted ? 'bg-red-50' : ''}>
-                <td className="px-4 py-2 text-sm">
-                  {game.date.toLocaleString()}
-                </td>
-                <td className="px-4 py-2 text-sm">
-                  {game.isHanchan ? 'Hanchan' : 'Tonpuusen'}
-                </td>
-                <td className="px-4 py-2 text-sm">
-                  <div>🀀 {game.eastPlayer.nickname}</div>
-                  <div>🀁 {game.southPlayer.nickname}</div>
-                  <div>🀂 {game.westPlayer.nickname}</div>
-                  <div>🀃 {game.northPlayer.nickname}</div>
-                </td>
-                <td className="px-4 py-2 text-sm">
-                  <div>{game.eastScore}</div>
-                  <div>{game.southScore}</div>
-                  <div>{game.westScore}</div>
-                  <div>{game.northScore}</div>
-                </td>
-                {isAdmin && (
-                  <td className="px-4 py-2 text-sm">
-                    <GameActions game={game} onGameUpdated={handleGameUpdated} />
-                  </td>
-                )}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {games.map((game) => {
+                const { placement, score } = getPlayerPlacement(game, playerId);
+                const ratingChange = game.ratingChanges?.find(rc => rc.statsId === playerId);
+
+                return (
+                  <tr key={game.id} className={`hover:bg-gray-50 ${game.isDeleted ? 'bg-red-50' : ''}`}>
+                    <td className="px-4 py-2 text-sm text-gray-900">
+                      {game.date.toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-gray-900">
+                      {game.isDeleted ? (
+                        <span className="text-red-600">Deleted</span>
+                      ) : (
+                        <span>{game.isHanchan ? 'Hanchan' : 'Tonpuusen'}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-sm">
+                      <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium
+                        ${placement === 1 ? 'bg-yellow-100 text-yellow-800' :
+                          placement === 2 ? 'bg-gray-200 text-gray-800' :
+                            placement === 3 ? 'bg-orange-100 text-orange-800' :
+                              'bg-gray-100 text-gray-700'}`}>
+                        {placement}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2 text-sm text-gray-900">
+                      {score}
+                    </td>
+                    <td className="px-4 py-2 text-sm">
+                      {ratingChange && (
+                        <div className="space-y-1">
+                          <div className={`${ratingChange.rankPoints > 0 ? 'text-green-600' : ratingChange.rankPoints < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                            {ratingChange.rankPoints > 0 ? '+' : ''}{ratingChange.rankPoints} rank points
+                          </div>
+                          <div className="text-gray-500 text-xs">
+                            {ratingChange.oldRank} → {ratingChange.newRank}
+                          </div>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-sm">
+                      <div className="space-y-1">
+                        <div>🀀 {game.eastPlayer.nickname}</div>
+                        <div>🀁 {game.southPlayer.nickname}</div>
+                        <div>🀂 {game.westPlayer.nickname}</div>
+                        <div>🀃 {game.northPlayer.nickname}</div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2 text-sm">
+                      <button
+                        onClick={() => setSelectedGameId(game.id)}
+                        className="text-indigo-600 hover:text-indigo-900"
+                        title="View game details"
+                      >
+                        📜
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {selectedGameId && (
+        <GameHistoryModal
+          gameId={selectedGameId}
+          onClose={() => setSelectedGameId(null)}
+        />
+      )}
     </div>
   );
 } 
