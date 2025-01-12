@@ -1,6 +1,6 @@
 'use client';
 
-import { Player, PlayerStats } from '../types/ranking';
+import { Player, PlayerStats } from '@/types/ranking';
 
 interface LeagueStatsProps {
   players: Player[];

@@ -1,3 +1,3 @@
-export { Navigation } from './Navigation';
-export { LoadingNavigation } from './LoadingNavigation';
-export { Providers } from './Providers'; 
+export { Navigation } from '@/components/Navigation';
+export { LoadingNavigation } from '@/components/LoadingNavigation';
+export { Providers } from '@/components/Providers'; 

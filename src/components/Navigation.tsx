@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { PlayerSearch } from './PlayerSearch';
+import { PlayerSearch } from '@/components/PlayerSearch';
 
 export function Navigation() {
   const pathname = usePathname();

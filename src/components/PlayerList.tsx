@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
-import { Player } from '../types/ranking';
-import { RankDisplay } from './RankDisplay';
-import { LoadingSpinner } from './ui/LoadingSpinner';
-import { ErrorMessage } from './ui/ErrorMessage';
+import { Player } from '@/types/ranking';
+import { RankDisplay } from '@/components/RankDisplay';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 
 interface PlayerListProps {
   players: Player[];

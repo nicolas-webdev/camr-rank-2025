@@ -1,9 +1,8 @@
 'use client';
 
 import { create } from 'zustand';
-import { Player, RankInfo } from '../types/ranking';
-import { RANKING_DATA } from '../data/rankingData';
-import { api } from '../services/api';
+import { Player, RankInfo } from '@/types/ranking';
+import { api } from '@/services/api';
 
 interface PlayerState {
   players: Player[];
@@ -31,7 +30,7 @@ export const usePlayerStore = create<PlayerStore>()((set) => ({
     try {
       const players = await api.getPlayers();
       set({ players, isLoading: false });
-    } catch (error) {
+    } catch {
       set({ error: 'Failed to fetch players', isLoading: false });
     }
   },
@@ -44,7 +43,7 @@ export const usePlayerStore = create<PlayerStore>()((set) => ({
         players: [...state.players, newPlayer],
         isLoading: false
       }));
-    } catch (error) {
+    } catch {
       set({ error: 'Failed to add player', isLoading: false });
     }
   },
@@ -57,7 +56,7 @@ export const usePlayerStore = create<PlayerStore>()((set) => ({
         players: state.players.filter((player) => player.id !== id),
         isLoading: false
       }));
-    } catch (error) {
+    } catch {
       set({ error: 'Failed to remove player', isLoading: false });
     }
   },

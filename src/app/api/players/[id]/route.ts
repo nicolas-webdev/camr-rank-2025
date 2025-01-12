@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { db } from '@/lib';
 import { z } from 'zod';
 import type { Session } from 'next-auth';
@@ -22,12 +22,11 @@ const playerSchema = z.object({
 });
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = await Promise.resolve(params.id);
-  
   try {
+    const { id } = await params;
     const player = await db.player.findUnique({
       where: { id },
       select: {
@@ -56,10 +55,11 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions) as ExtendedSession;
     if (!session?.user?.id) {
       return new NextResponse('Unauthorized', { status: 401 });
@@ -75,11 +75,11 @@ export async function PUT(
       return new NextResponse('Forbidden - Only admins can update players', { status: 403 });
     }
 
-    const body = await request.json();
+    const body = await req.json();
     const validatedData = playerSchema.parse(body);
 
     const player = await db.player.update({
-      where: { id: params.id },
+      where: { id },
       data: validatedData,
     });
 
@@ -94,10 +94,11 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions) as ExtendedSession;
     if (!session?.user?.id) {
       return new NextResponse('Unauthorized', { status: 401 });
@@ -115,7 +116,7 @@ export async function DELETE(
 
     // Check if player has any games
     const player = await db.player.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: {
           select: {
@@ -146,7 +147,7 @@ export async function DELETE(
     }
 
     await db.player.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return new NextResponse(null, { status: 204 });

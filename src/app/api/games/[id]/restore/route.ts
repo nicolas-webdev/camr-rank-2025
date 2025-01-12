@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { db, calculatePointsForPosition } from '@/lib';
 import type { Session } from 'next-auth';
 
@@ -15,10 +15,11 @@ interface ExtendedSession extends Session {
 }
 
 export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions) as ExtendedSession;
     if (!session?.user?.id) {
       return new NextResponse('Unauthorized', { status: 401 });
@@ -35,7 +36,7 @@ export async function POST(
     }
 
     const game = await db.game.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         eastPlayer: true,
         southPlayer: true,
@@ -56,7 +57,7 @@ export async function POST(
     await db.$transaction(async (tx) => {
       // Mark game as not deleted
       await tx.game.update({
-        where: { id: params.id },
+        where: { id },
         data: {
           isDeleted: false,
           deletedAt: null,

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { GameEditModal } from './GameEditModal';
-import GameHistoryModal from './GameHistoryModal';
+import { GameEditModal } from '@/components/GameEditModal';
+import GameHistoryModal from '@/components/GameHistoryModal';
 import type { Game, GameFormData } from '@/types/game';
 
 type GameActionsProps = {

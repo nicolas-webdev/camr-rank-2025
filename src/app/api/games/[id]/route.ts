@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
 import { db, calculatePointsForPosition, getRankByPoints } from '@/lib';
 import type { Session } from 'next-auth';
@@ -102,12 +102,13 @@ async function recalculateAllPoints(tx: Prisma.TransactionClient) {
 
 // Get a specific game
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const game = await db.game.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         eastPlayer: true,
         southPlayer: true,
@@ -144,9 +145,11 @@ export async function GET(
 
 // Update a game
 export async function PUT(
-  request: Request
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions) as ExtendedSession;
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -168,14 +171,14 @@ export async function PUT(
       );
     }
 
-    const body = await request.json();
+    const body = await req.json();
     
     try {
       const validatedData = gameSchema.parse(body);
       
       // Verify the game exists
       const game = await db.game.findUnique({
-        where: { id: validatedData.id }
+        where: { id }
       });
 
       if (!game) {
@@ -189,7 +192,7 @@ export async function PUT(
       const updatedGame = await db.$transaction(async (tx) => {
         // First update the game
         const updated = await tx.game.update({
-          where: { id: validatedData.id },
+          where: { id },
           data: {
             date: new Date(validatedData.date),
             isHanchan: validatedData.isHanchan,
@@ -238,10 +241,11 @@ export async function PUT(
 
 // Delete a game
 export async function DELETE(
-  request: Request,
-  { params: { id } }: { params: { id: string } }
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions) as ExtendedSession;
     if (!session?.user?.id) {
       return NextResponse.json(

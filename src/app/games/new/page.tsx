@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { PlayerSelect } from '../../../components/PlayerSelect';
+import { PlayerSelect } from '@/components/PlayerSelect';
 
 interface GameData {
   date: string;

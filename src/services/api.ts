@@ -1,4 +1,4 @@
-import { Player, GameResult, PlayerStats, GameType, Position } from '../types/ranking';
+import { Player, GameResult, PlayerStats, GameType, Position } from '@/types/ranking';
 
 export const api = {
   // Player endpoints

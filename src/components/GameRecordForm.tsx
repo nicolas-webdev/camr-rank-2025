@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { GameType, Player, Position } from '../types/ranking';
+import { GameType, Player, Position } from '@/types/ranking';
 
 interface GameRecordFormProps {
   players: Player[];

@@ -1,13 +1,12 @@
 import { Suspense } from 'react';
-import { use } from 'react';
-import PlayerProfileClient from './PlayerProfileClient';
+import PlayerProfileClient from '@/app/players/[id]/PlayerProfileClient';
 
-interface PageParams {
-  id: string;
+interface PageProps {
+  params: Promise<{ id: string }>;
 }
 
-export default function PlayerProfilePage({ params }: { params: PageParams }) {
-  const { id } = use(Promise.resolve(params));
+export default async function PlayerProfilePage({ params }: PageProps) {
+  const { id } = await params;
 
   return (
     <Suspense fallback={

@@ -1,6 +1,6 @@
 'use client';
 
-import { PlayerStats } from '../types/ranking';
+import { PlayerStats } from '@/types/ranking';
 
 interface PlayerStatsDisplayProps {
   stats: PlayerStats;
@@ -13,7 +13,7 @@ export const PlayerStatsDisplay = ({ stats, playerName }: PlayerStatsDisplayProp
 
   return (
     <div className="bg-white rounded-lg shadow p-4">
-      <h3 className="text-lg font-semibold mb-4">{playerName}'s Statistics</h3>
+      <h3 className="text-lg font-semibold mb-4">{playerName}&apos;s Statistics</h3>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -49,9 +49,9 @@ export const PlayerStatsDisplay = ({ stats, playerName }: PlayerStatsDisplayProp
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
                   className={`h-2 rounded-full ${position === 'first' ? 'bg-green-500' :
-                      position === 'second' ? 'bg-blue-500' :
-                        position === 'third' ? 'bg-yellow-500' :
-                          'bg-red-500'
+                    position === 'second' ? 'bg-blue-500' :
+                      position === 'third' ? 'bg-yellow-500' :
+                        'bg-red-500'
                     }`}
                   style={{
                     width: `${(stats.positions[position] / stats.totalGames) * 100}%`

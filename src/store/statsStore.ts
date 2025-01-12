@@ -1,8 +1,8 @@
 'use client';
 
 import { create } from 'zustand';
-import { PlayerStats } from '../types/ranking';
-import { api } from '../services/api';
+import { PlayerStats } from '@/types/ranking';
+import { api } from '@/services/api';
 
 interface StatsState {
   playerStats: Record<string, PlayerStats>;
@@ -17,7 +17,7 @@ interface StatsActions {
 
 type StatsStore = StatsState & StatsActions;
 
-export const useStatsStore = create<StatsStore>()((set, get) => ({
+export const useStatsStore = create<StatsStore>()((set) => ({
   playerStats: {},
   isLoading: false,
   error: null,
@@ -33,7 +33,7 @@ export const useStatsStore = create<StatsStore>()((set, get) => ({
         },
         isLoading: false
       }));
-    } catch (error) {
+    } catch {
       set({ error: 'Failed to fetch player stats', isLoading: false });
     }
   },
@@ -49,7 +49,7 @@ export const useStatsStore = create<StatsStore>()((set, get) => ({
         },
         isLoading: false
       }));
-    } catch (error) {
+    } catch {
       set({ error: 'Failed to update player stats', isLoading: false });
     }
   }

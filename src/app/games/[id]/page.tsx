@@ -2,18 +2,12 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib';
 
-type Position = 'East' | 'South' | 'West' | 'North';
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
 
-type Score = {
-  position: Position;
-  player: {
-    id: string;
-    nickname: string;
-  };
-  score: number;
-};
-
-async function getGameData(id: string) {
+export default async function GamePage({ params }: PageProps) {
+  const { id } = await params;
   const game = await db.game.findUnique({
     where: { id },
     include: {
@@ -21,83 +15,63 @@ async function getGameData(id: string) {
       southPlayer: true,
       westPlayer: true,
       northPlayer: true,
-    },
+      createdBy: {
+        select: { name: true }
+      },
+      updatedBy: {
+        select: { name: true }
+      },
+      deletedBy: {
+        select: { name: true }
+      }
+    }
   });
 
   if (!game) {
-    return null;
-  }
-
-  const scores: Score[] = [
-    { position: 'East' as Position, player: game.eastPlayer, score: game.eastScore },
-    { position: 'South' as Position, player: game.southPlayer, score: game.southScore },
-    { position: 'West' as Position, player: game.westPlayer, score: game.westScore },
-    { position: 'North' as Position, player: game.northPlayer, score: game.northScore },
-  ].sort((a, b) => b.score - a.score);
-
-  return {
-    game,
-    scores,
-  };
-}
-
-export default async function GameDetail({ params }: { params: { id: string } }) {
-  const data = await getGameData(params.id);
-
-  if (!data) {
     notFound();
   }
 
-  const { game, scores } = data;
-
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Game Details</h1>
-          <p className="text-gray-500">
-            {new Date(game.date).toLocaleDateString()}
-          </p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mb-6">
+        <Link
+          href="/games"
+          className="text-blue-600 hover:text-blue-800"
+        >
+          ← Back to Games
+        </Link>
+      </div>
+
+      <div className="bg-white shadow rounded-lg p-6">
+        <h1 className="text-2xl font-bold mb-4">Game Details</h1>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Game Information</h2>
+            <p>Date: {game.date.toLocaleString()}</p>
+            <p>Type: {game.isHanchan ? 'Hanchan' : 'Tonpuusen'}</p>
+            <p>Status: {game.isDeleted ? 'Deleted' : 'Active'}</p>
+          </div>
+
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Players</h2>
+            <div className="space-y-2">
+              <p>East: {game.eastPlayer.nickname} ({game.eastScore.toLocaleString()})</p>
+              <p>South: {game.southPlayer.nickname} ({game.southScore.toLocaleString()})</p>
+              <p>West: {game.westPlayer.nickname} ({game.westScore.toLocaleString()})</p>
+              <p>North: {game.northPlayer.nickname} ({game.northScore.toLocaleString()})</p>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {scores.map(({ position, player, score }, index) => (
-              <div
-                key={player.id}
-                className="bg-gray-50 p-4 rounded-lg border border-gray-200"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-lg font-medium">{position}</h3>
-                  <span className="text-sm text-gray-500">
-                    {index + 1}
-                    {index === 0 ? 'st'
-                      : index === 1 ? 'nd'
-                        : index === 2 ? 'rd'
-                          : 'th'} place
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <Link
-                    href={`/players/${player.id}`}
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    {player.nickname}
-                  </Link>
-                  <span className="font-medium">{score}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-8 flex justify-end">
-            <Link
-              href="/"
-              className="text-gray-600 hover:text-gray-800"
-            >
-              Back to Home
-            </Link>
-          </div>
+        <div className="mt-6 text-sm text-gray-500">
+          <p>Created by: {game.createdBy?.name || 'Unknown'}</p>
+          {game.updatedBy && (
+            <p>Last updated by: {game.updatedBy.name || 'Unknown'}</p>
+          )}
+          {game.deletedBy && (
+            <p>Deleted by: {game.deletedBy.name || 'Unknown'}</p>
+          )}
         </div>
       </div>
     </div>

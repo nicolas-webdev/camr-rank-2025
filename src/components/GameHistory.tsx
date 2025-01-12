@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
-import { GameResult, Player } from '../types/ranking';
-import { LoadingSpinner } from './ui/LoadingSpinner';
-import { ErrorMessage } from './ui/ErrorMessage';
+import { GameResult, Player } from '@/types/ranking';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 
 interface GameHistoryProps {
   games: GameResult[];

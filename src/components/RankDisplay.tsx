@@ -1,6 +1,6 @@
 'use client';
 
-import { RankInfo } from '../types/ranking';
+import { RankInfo } from '@/types/ranking';
 
 interface RankDisplayProps {
   currentRank: RankInfo;

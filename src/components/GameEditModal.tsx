@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useState } from 'react';
 import { Dialog } from '@headlessui/react';
-import { PlayerSelect } from './PlayerSelect';
+import { PlayerSelect } from '@/components/PlayerSelect';
 import type { Game, GameFormData } from '@/types/game';
 
 interface GameEditModalProps {

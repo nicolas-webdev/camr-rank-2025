@@ -1,4 +1,4 @@
-import { RankInfo } from '../types/ranking';
+import { RankInfo } from '@/types/ranking';
 
 export const RANKING_DATA: RankInfo[] = [
   {

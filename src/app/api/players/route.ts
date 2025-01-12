@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
 import { db } from '@/lib';
 import { getRankByPoints } from '@/lib/ranking';
-import { authOptions } from '../auth/[...nextauth]/route';
 import type { Session } from 'next-auth';
 
 // Extend Session type to include id
