@@ -28,6 +28,7 @@ export const authOptions: AuthOptions = {
     GithubProvider({
       clientId: process.env.GITHUB_ID!,
       clientSecret: process.env.GITHUB_SECRET!,
+      allowDangerousEmailAccountLinking: true,
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
@@ -38,7 +39,10 @@ export const authOptions: AuthOptions = {
       // Check if user exists, if not create them
       const dbUser = await db.user.upsert({
         where: { email: user.email },
-        update: {},
+        update: {
+          name: user.name,
+          image: user.image,
+        },
         create: {
           email: user.email,
           name: user.name,
@@ -73,6 +77,7 @@ export const authOptions: AuthOptions = {
   },
   pages: {
     signIn: '/auth/signin',
+    error: '/auth/error',
   },
   session: {
     strategy: 'jwt'

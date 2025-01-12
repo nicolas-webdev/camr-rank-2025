@@ -43,6 +43,12 @@ export interface GameResult {
     position: Position;
     pointsEarned: number;
     finalScore: number;
+    rankChange?: {
+      from: string;
+      to: string;
+      pointsBeforeGame: number;
+      pointsAfterGame: number;
+    };
   }[];
 }
 

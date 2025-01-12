@@ -18,6 +18,11 @@ interface ExtendedSession extends Session {
 
 const playerSchema = z.object({
   nickname: z.string().min(2).max(30),
+  legajo: z.number().int().positive(),
+  realName: z.string().min(2).max(50),
+  nationality: z.string().default("Argentina"),
+  tenhouName: z.string().optional(),
+  mahjongSoulName: z.string().optional(),
 });
 
 // GET is public - no authentication required
@@ -124,14 +129,20 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validatedData = playerSchema.parse(body);
 
-    // Check if player with nickname already exists
-    const existingPlayer = await db.player.findUnique({
-      where: { nickname: validatedData.nickname },
+    // Check if player with nickname or legajo already exists
+    const existingPlayer = await db.player.findFirst({
+      where: {
+        OR: [
+          { nickname: validatedData.nickname },
+          { legajo: validatedData.legajo }
+        ]
+      },
     });
 
     if (existingPlayer) {
+      const field = existingPlayer.nickname === validatedData.nickname ? 'nickname' : 'legajo';
       return NextResponse.json(
-        { error: 'Player with this nickname already exists' },
+        { error: `Player with this ${field} already exists` },
         { status: 400, headers: { 'content-type': 'application/json' } }
       );
     }
@@ -140,6 +151,14 @@ export async function POST(request: Request) {
     const player = await db.player.create({
       data: {
         nickname: validatedData.nickname,
+        legajo: validatedData.legajo,
+        realName: validatedData.realName,
+        nationality: validatedData.nationality,
+        tenhouName: validatedData.tenhouName,
+        mahjongSoulName: validatedData.mahjongSoulName,
+        rating: 1500,
+        points: 0,
+        rank: "新人",
       },
     });
 
