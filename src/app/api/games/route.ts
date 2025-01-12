@@ -6,6 +6,21 @@ import { db, calculatePointsForPosition, getRankByPoints } from '@/lib';
 import type { Session } from 'next-auth';
 import type { Prisma } from '@prisma/client';
 
+// Next.js 15 requires dynamic route parameters to be handled as Promises. To ensure compatibility, I've made the following changes:
+
+// - Updated all API route handlers to use Promise<{ id: string }> for params
+// - Fixed page components to handle Promise params in [id] routes
+// - Removed unnecessary type annotations and simplified code
+// - Fixed unused variable in handlers
+// - Updated all route handlers
+// - Updated the related page components
+
+// This change aligns with Next.js 15's new routing conventions and fixes type errors
+// during build. A codemod is available for this change, but manual updates were
+// needed to ensure proper typing and error handling.
+
+// See: https://nextjs.org/docs/app/api-reference/file-conventions/route#context-optional
+
 // Extend Session type to include id
 interface ExtendedSession extends Session {
   user: {
