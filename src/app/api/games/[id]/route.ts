@@ -84,7 +84,7 @@ async function recalculateAllPoints(tx: Prisma.TransactionClient) {
       if (!player) continue;
 
       // Calculate points based on current rank and position
-      const pointsChange = calculatePointsForPosition(i, game.isHanchan, player.points.toString());
+      const pointsChange = calculatePointsForPosition(i, game.isHanchan, player.rank);
       const newPoints = player.points + pointsChange;
       const newRank = getRankByPoints(newPoints);
 

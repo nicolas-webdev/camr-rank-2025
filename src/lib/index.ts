@@ -1,5 +1,5 @@
 import { db } from '@/lib/prisma';
-import { calculatePointsForPosition, getRankByPoints, shouldDropRank, updatePlayerRank, calculateGameRankInfo } from '@/lib/ranking';
+import { calculatePointsForPosition, getRankByPoints, shouldDropRank, updatePlayerRank, calculateGameRankInfo, recalculateAllPoints } from '@/lib/ranking';
 import type { RankInfo, Position } from '@/lib/ranking';
 
 export {
@@ -9,6 +9,7 @@ export {
   shouldDropRank,
   updatePlayerRank,
   calculateGameRankInfo,
+  recalculateAllPoints,
   type RankInfo,
   type Position
 }; 

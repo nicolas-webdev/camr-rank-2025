@@ -2,24 +2,9 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
-import { db, calculatePointsForPosition, getRankByPoints } from '@/lib';
+import { db, recalculateAllPoints } from '@/lib';
 import type { Session } from 'next-auth';
 import type { Prisma } from '@prisma/client';
-
-// Next.js 15 requires dynamic route parameters to be handled as Promises. To ensure compatibility, I've made the following changes:
-
-// - Updated all API route handlers to use Promise<{ id: string }> for params
-// - Fixed page components to handle Promise params in [id] routes
-// - Removed unnecessary type annotations and simplified code
-// - Fixed unused variable in handlers
-// - Updated all route handlers
-// - Updated the related page components
-
-// This change aligns with Next.js 15's new routing conventions and fixes type errors
-// during build. A codemod is available for this change, but manual updates were
-// needed to ensure proper typing and error handling.
-
-// See: https://nextjs.org/docs/app/api-reference/file-conventions/route#context-optional
 
 // Extend Session type to include id
 interface ExtendedSession extends Session {
@@ -90,49 +75,6 @@ export async function GET() {
   }
 }
 
-// Recalculate all points for a player
-async function recalculatePlayerPoints(tx: Prisma.TransactionClient, playerId: string) {
-  // Get all games for this player in chronological order
-  const games = await tx.game.findMany({
-    where: {
-      OR: [
-        { eastPlayerId: playerId },
-        { southPlayerId: playerId },
-        { westPlayerId: playerId },
-        { northPlayerId: playerId }
-      ],
-      isDeleted: false
-    },
-    orderBy: {
-      date: 'asc'
-    }
-  });
-
-  // Calculate points progressively through their game history
-  let points = 0;
-  let currentRank = '新人';
-  
-  for (const game of games) {
-    const position = game.eastPlayerId === playerId ? 0 
-      : game.southPlayerId === playerId ? 1
-      : game.westPlayerId === playerId ? 2
-      : 3;
-    
-    // Calculate points based on their rank at the time of this game
-    points += calculatePointsForPosition(position, game.isHanchan, currentRank);
-    currentRank = getRankByPoints(points).kanji;
-  }
-
-  // Update player's final points and rank
-  await tx.player.update({
-    where: { id: playerId },
-    data: {
-      points,
-      rank: currentRank
-    }
-  });
-}
-
 // POST requires authentication
 export async function POST(request: Request) {
   try {
@@ -166,13 +108,8 @@ export async function POST(request: Request) {
         },
       });
 
-      // Recalculate points for all affected players
-      await Promise.all([
-        recalculatePlayerPoints(tx, validatedData.eastPlayerId),
-        recalculatePlayerPoints(tx, validatedData.southPlayerId),
-        recalculatePlayerPoints(tx, validatedData.westPlayerId),
-        recalculatePlayerPoints(tx, validatedData.northPlayerId),
-      ]);
+      // Recalculate all points to ensure correct ranking by score
+      await recalculateAllPoints(tx);
 
       return createdGame;
     });

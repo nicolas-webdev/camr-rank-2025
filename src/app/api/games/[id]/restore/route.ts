@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { db, calculatePointsForPosition } from '@/lib';
+import { db, recalculateAllPoints } from '@/lib';
 import type { Session } from 'next-auth';
 
 // Extend Session type to include id
@@ -36,13 +36,7 @@ export async function POST(
     }
 
     const game = await db.game.findUnique({
-      where: { id },
-      include: {
-        eastPlayer: true,
-        southPlayer: true,
-        westPlayer: true,
-        northPlayer: true,
-      }
+      where: { id }
     });
 
     if (!game) {
@@ -53,7 +47,7 @@ export async function POST(
       return new NextResponse('Game is not deleted', { status: 400 });
     }
 
-    // Restore the game and update player points
+    // Restore the game and recalculate all points
     await db.$transaction(async (tx) => {
       // Mark game as not deleted
       await tx.game.update({
@@ -66,33 +60,8 @@ export async function POST(
         },
       });
 
-      // Restore player points
-      await Promise.all([
-        tx.player.update({
-          where: { id: game.eastPlayerId },
-          data: {
-            points: { increment: calculatePointsForPosition(0, game.isHanchan, game.eastPlayer.points.toString()) },
-          },
-        }),
-        tx.player.update({
-          where: { id: game.southPlayerId },
-          data: {
-            points: { increment: calculatePointsForPosition(1, game.isHanchan, game.southPlayer.points.toString()) },
-          },
-        }),
-        tx.player.update({
-          where: { id: game.westPlayerId },
-          data: {
-            points: { increment: calculatePointsForPosition(2, game.isHanchan, game.westPlayer.points.toString()) },
-          },
-        }),
-        tx.player.update({
-          where: { id: game.northPlayerId },
-          data: {
-            points: { increment: calculatePointsForPosition(3, game.isHanchan, game.northPlayer.points.toString()) },
-          },
-        }),
-      ]);
+      // Recalculate all points from the beginning
+      await recalculateAllPoints(tx);
     });
 
     return new NextResponse(null, { status: 204 });

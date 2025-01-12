@@ -302,7 +302,17 @@ export function calculatePointsForPosition(position: Position | number, isHancha
   return isHanchan ? rankInfo.pointsForPosition.hanchan[positionIndex] : rankInfo.pointsForPosition.tonpuusen[positionIndex];
 }
 
-export function calculateGameRankInfo(game: { isHanchan: boolean; eastPlayerId: string; southPlayerId: string; westPlayerId: string; northPlayerId: string; eastScore: number; southScore: number; westScore: number; northScore: number; }) {
+export function calculateGameRankInfo(game: { 
+  isHanchan: boolean; 
+  eastPlayerId: string; 
+  southPlayerId: string; 
+  westPlayerId: string; 
+  northPlayerId: string; 
+  eastScore: number; 
+  southScore: number; 
+  westScore: number; 
+  northScore: number;
+}) {
   const positions = [
     { playerId: game.eastPlayerId, position: 'east' as Position, score: game.eastScore, seatIndex: 0 },
     { playerId: game.southPlayerId, position: 'south' as Position, score: game.southScore, seatIndex: 1 },
@@ -328,4 +338,68 @@ export function calculateGameRankInfo(game: { isHanchan: boolean; eastPlayerId: 
     rank: index + 1,
     points: calculatePointsForPosition(index, game.isHanchan, '新人') // Use beginner rank for initial calculations
   }));
+}
+
+export async function recalculateAllPoints(tx: Prisma.TransactionClient) {
+  // Get all players
+  const players = await tx.player.findMany();
+  
+  // Reset all players' points to 0 and rank to 新人
+  await Promise.all(
+    players.map((player) =>
+      tx.player.update({
+        where: { id: player.id },
+        data: {
+          points: 0,
+          rank: '新人'
+        }
+      })
+    )
+  );
+
+  // Get all non-deleted games, ordered by date
+  const games = await tx.game.findMany({
+    where: {
+      isDeleted: false
+    },
+    orderBy: {
+      date: 'asc'
+    }
+  });
+
+  // Replay each game in chronological order
+  for (const game of games) {
+    const positions = [
+      { playerId: game.eastPlayerId, score: game.eastScore },
+      { playerId: game.southPlayerId, score: game.southScore },
+      { playerId: game.westPlayerId, score: game.westScore },
+      { playerId: game.northPlayerId, score: game.northScore },
+    ].sort((a, b) => b.score - a.score);
+
+    // Update each player's points based on their position
+    for (let i = 0; i < positions.length; i++) {
+      const { playerId } = positions[i];
+      
+      // Get player's current points before updating
+      const player = await tx.player.findUnique({
+        where: { id: playerId }
+      });
+
+      if (!player) continue;
+
+      // Calculate points based on current rank and position
+      const pointsChange = calculatePointsForPosition(i, game.isHanchan, player.rank);
+      const newPoints = player.points + pointsChange;
+      const newRank = getRankByPoints(newPoints);
+
+      // Update player's points and rank
+      await tx.player.update({
+        where: { id: playerId },
+        data: {
+          points: newPoints,
+          rank: newRank.kanji
+        }
+      });
+    }
+  }
 } 
